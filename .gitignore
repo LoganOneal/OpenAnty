@@ -1,0 +1,41 @@
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+.DS_Store
+Thumbs.db
+*.pdb
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local GhostFox data (never commit secrets)
+.ghostfox-data/
+*.token
+master.key
+recovery.key
+
+# Installer build outputs
+packaging/out/
+packaging/windows/obj/
+*.msi
+*.wixobj
+*.wixpdb
+
+# Env / local config
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+/tmp/
+/test-output/
+.ghostfox-data*/
+.chrome-test-ud/
+e2e-*.txt
+e2e-*.json
+launch.json
+launch.err
+prof.json
+prof.err
+packaging/out/
