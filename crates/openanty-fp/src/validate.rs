@@ -38,6 +38,26 @@ pub fn validate(doc: &FingerprintDocument) -> ConsistencyReport {
                 errors.push("Linux OS requires Linux token in user_agent".into());
             }
         }
+        OsFamily::Android => {
+            if !doc.user_agent.contains("Android") {
+                errors.push("Android OS requires Android token in user_agent".into());
+            }
+            if !doc.user_agent.contains("Mobile") {
+                errors.push("Android Chrome UA should include Mobile".into());
+            }
+            if !doc.client_hints.mobile {
+                errors.push("Android profile requires client_hints.mobile=true".into());
+            }
+            if doc.max_touch_points == 0 {
+                errors.push("Android profile requires max_touch_points > 0".into());
+            }
+            if doc.screen.width > 600 {
+                warnings.push(format!(
+                    "Android screen width {} looks desktop-sized",
+                    doc.screen.width
+                ));
+            }
+        }
     }
 
     if doc.hardware_concurrency == 0 || doc.hardware_concurrency > 256 {
@@ -56,6 +76,7 @@ pub fn validate(doc: &FingerprintDocument) -> ConsistencyReport {
             OsFamily::Windows => "win",
             OsFamily::Macos => "mac",
             OsFamily::Linux => "linux",
+            OsFamily::Android => "android",
         })
     {
         warnings.push(format!(
@@ -103,6 +124,7 @@ mod tests {
             FingerprintTemplate::Win11ChromeMid,
             FingerprintTemplate::MacosChromeMSeries,
             FingerprintTemplate::LinuxChromeGeneric,
+            FingerprintTemplate::AndroidChromePixel,
         ] {
             let doc = generate(t, None, 130, None, None);
             let r = validate(&doc);

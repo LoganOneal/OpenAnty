@@ -34,6 +34,8 @@ pub fn generate(
 
     let major = if binary_major == 0 { 130 } else { binary_major };
     let full_version = format!("{major}.0.0.0");
+    let models = ["Pixel 7", "Pixel 7a", "Pixel 8"];
+    let model = models[rng.gen_range(0..models.len())].to_string();
     let ua = match os {
         OsFamily::Windows => format!(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{full_version} Safari/537.36"
@@ -44,6 +46,9 @@ pub fn generate(
         OsFamily::Linux => format!(
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{full_version} Safari/537.36"
         ),
+        OsFamily::Android => format!(
+            "Mozilla/5.0 (Linux; Android 14; {model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{full_version} Mobile Safari/537.36"
+        ),
     };
 
     let (hc, dm) = match template {
@@ -51,10 +56,26 @@ pub fn generate(
         FingerprintTemplate::Win11ChromeMid => (8, 8.0),
         FingerprintTemplate::MacosChromeMSeries => (8, 8.0),
         FingerprintTemplate::LinuxChromeGeneric => (8, 8.0),
+        FingerprintTemplate::AndroidChromePixel => (8, 8.0),
         FingerprintTemplate::RandomCoherent => {
             let options = [(4, 4.0), (8, 8.0), (12, 16.0), (16, 16.0)];
             options[rng.gen_range(0..options.len())]
         }
+    };
+
+    let mobile = os == OsFamily::Android || template.is_mobile();
+    let dpr = if os == OsFamily::Macos {
+        2.0
+    } else if mobile {
+        2.625
+    } else {
+        1.0
+    };
+    let touch = if mobile { 5 } else { 0 };
+    let avail_h = if mobile {
+        h
+    } else {
+        h.saturating_sub(40)
     };
 
     FingerprintDocument {
@@ -71,13 +92,13 @@ pub fn generate(
             width: w,
             height: h,
             avail_width: w,
-            avail_height: h.saturating_sub(40),
+            avail_height: avail_h,
             color_depth: 24,
-            device_pixel_ratio: if os == OsFamily::Macos { 2.0 } else { 1.0 },
+            device_pixel_ratio: dpr,
         },
         hardware_concurrency: hc,
         device_memory: dm,
-        max_touch_points: 0,
+        max_touch_points: touch,
         webgl: webgl_info(&cat.webgl[webgl_idx]),
         fonts_set_id: cat.fonts_set_id.to_string(),
         webrtc_policy: "public_only".into(),
@@ -97,13 +118,13 @@ pub fn generate(
                     version: "24".into(),
                 },
             ],
-            mobile: false,
+            mobile,
             platform: cat.ch_platform.to_string(),
             platform_version: cat.ch_platform_version.to_string(),
             architecture: cat.ch_architecture.to_string(),
-            bitness: "64".into(),
+            bitness: if mobile { "64".into() } else { "64".into() },
             ua_full_version: full_version,
-            model: String::new(),
+            model: if mobile { model } else { String::new() },
         },
         noise: NoiseSeeds {
             canvas: rng.gen(),

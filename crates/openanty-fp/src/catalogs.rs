@@ -22,6 +22,7 @@ pub fn catalog(os: OsFamily) -> &'static OsCatalog {
         OsFamily::Windows => &WINDOWS,
         OsFamily::Macos => &MACOS,
         OsFamily::Linux => &LINUX,
+        OsFamily::Android => &ANDROID,
     }
 }
 
@@ -102,6 +103,33 @@ static LINUX: OsCatalog = OsCatalog {
         ("America/New_York", &["en-US", "en"]),
         ("Europe/Berlin", &["en-US", "en"]),
         ("UTC", &["en-US", "en"]),
+    ],
+};
+
+/// Android Chrome (desktop Chrome + CDP mobile emulation).
+static ANDROID: OsCatalog = OsCatalog {
+    os_version: "14",
+    platform: "Linux armv8l",
+    fonts_set_id: "android_noto",
+    ch_platform: "Android",
+    ch_platform_version: "14.0.0",
+    ch_architecture: "",
+    // CSS viewport sizes (Pixel-class)
+    screens: &[(390, 844), (412, 915), (360, 800), (393, 873)],
+    webgl: &[
+        WebGlEntry {
+            vendor: "Google Inc. (Google)",
+            renderer: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        },
+        WebGlEntry {
+            vendor: "Qualcomm",
+            renderer: "Adreno (TM) 730",
+        },
+    ],
+    locales: &[
+        ("America/New_York", &["en-US", "en"]),
+        ("America/Los_Angeles", &["en-US", "en"]),
+        ("Europe/London", &["en-GB", "en"]),
     ],
 };
 

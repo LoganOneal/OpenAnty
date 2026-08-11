@@ -52,6 +52,7 @@ impl CreateProfileRequest {
             "windows" | "win" => Some(OsFamily::Windows),
             "macos" | "mac" | "darwin" => Some(OsFamily::Macos),
             "linux" => Some(OsFamily::Linux),
+            "android" => Some(OsFamily::Android),
             _ => None,
         })
     }

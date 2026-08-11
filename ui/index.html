@@ -264,6 +264,7 @@
           <label>OS preference</label>
           <select id="m-os">
             <option value="">Auto</option>
+            <option value="android">Android (phone)</option>
             <option value="windows">Windows</option>
             <option value="macos">macOS</option>
             <option value="linux">Linux</option>
@@ -278,11 +279,13 @@
           <label>Template</label>
           <select id="m-template">
             <option value="">Default (Win11 Chrome mid)</option>
+            <option value="android_chrome_pixel">android_chrome_pixel (mobile phone)</option>
             <option value="win11_chrome_mid">win11_chrome_mid</option>
-            <option value="win10_chrome_mid">win10_chrome_mid</option>
-            <option value="macos_chrome_mid">macos_chrome_mid</option>
+            <option value="win11_chrome_high">win11_chrome_high</option>
+            <option value="macos_chrome_m_series">macos_chrome_m_series</option>
+            <option value="linux_chrome_generic">linux_chrome_generic</option>
           </select>
-          <p class="muted sm">Coherent fingerprint document is generated on create. Engine-level stealth is Phase B (patched Chromium).</p>
+          <p class="muted sm">Pick android_chrome_pixel for phone viewport/UA/touch via CDP on launch.</p>
         </div>
         <div class="tab-pane" data-pane="cookies">
           <label>Cookies JSON array</label>

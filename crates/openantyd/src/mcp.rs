@@ -308,6 +308,24 @@ fn tool_defs() -> Vec<Value> {
             }),
         ),
         tool(
+            "setup_mobile_profile",
+            "Create an Android/mobile phone profile (Pixel-class). Launch applies CDP mobile viewport, UA, and touch. Use for mobile web flows (e.g. Reddit register).",
+            json!({
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": { "type": "string" },
+                    "device": {
+                        "type": "string",
+                        "description": "pixel_7 | pixel_8 (default pixel_7). Currently all map to android_chrome_pixel template."
+                    },
+                    "proxy": { "type": "string" },
+                    "cookies": { "type": "array" },
+                    "tags": { "type": "array", "items": { "type": "string" } }
+                }
+            }),
+        ),
+        tool(
             "page_navigate",
             "Navigate the live session browser to a URL (native CDP, no Playwright). Returns page url/title/html snapshot.",
             json!({
@@ -591,6 +609,84 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
                     ])
                 },
                 "hint": "For agents: npx -y openanty@latest mcp"
+            })
+        }
+        "setup_mobile_profile" => {
+            let name = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or("name required")?
+                .to_string();
+            let mut tags: Vec<String> = args
+                .get("tags")
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            for t in ["mobile", "android"] {
+                if !tags.iter().any(|x| x == t) {
+                    tags.push(t.into());
+                }
+            }
+            let device = args
+                .get("device")
+                .and_then(|v| v.as_str())
+                .unwrap_or("pixel_7");
+            let req = CreateProfileRequest {
+                name: name.clone(),
+                template: Some("android_chrome_pixel".into()),
+                os: Some("android".into()),
+                proxy: None,
+                fingerprint_overrides: None,
+                tags: Some(tags),
+                notes: Some(format!("mobile profile device={device}")),
+            };
+            let profile = service.create_profile(req).map_err(|e| e.to_string())?;
+            let mut proxy_status = None;
+            if let Some(proxy_str) = args.get("proxy").and_then(|v| v.as_str()) {
+                if !proxy_str.is_empty() {
+                    let proxy = parse_proxy_url(proxy_str).map_err(|e| e.to_string())?;
+                    let (_p, status, _regen) = service
+                        .apply_proxy(
+                            &profile.id,
+                            ApplyProxyRequest {
+                                proxy,
+                                align_geo: true,
+                                check: true,
+                            },
+                        )
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    proxy_status = Some(status);
+                }
+            }
+            if let Some(cookies_val) = args.get("cookies") {
+                if !cookies_val.is_null() {
+                    let cookies: Vec<Cookie> =
+                        serde_json::from_value(cookies_val.clone()).map_err(|e| e.to_string())?;
+                    if !cookies.is_empty() {
+                        let _ = service
+                            .import_cookies(&profile.id, cookies, true)
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+            let profile = service
+                .get_profile(&profile.id, true)
+                .map_err(|e| e.to_string())?;
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "profile_id": profile.id,
+                "mobile": true,
+                "template": "android_chrome_pixel",
+                "device": device,
+                "user_agent": profile.fingerprint.as_ref().map(|f| f.user_agent.clone()),
+                "screen": profile.fingerprint.as_ref().map(|f| json!({
+                    "width": f.screen.width,
+                    "height": f.screen.height,
+                    "dpr": f.screen.device_pixel_ratio
+                })),
+                "proxy_status": proxy_status,
+                "next": "launch_session with headed=true; mobile CDP metrics apply automatically"
             })
         }
         "setup_scrape_profile" => {

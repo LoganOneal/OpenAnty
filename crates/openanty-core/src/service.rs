@@ -455,6 +455,19 @@ impl OpenAntyService {
         }
         // Lang / timezone best-effort via prefs-like flags
         args.push(format!("--lang={}", profile.fingerprint.languages.first().cloned().unwrap_or_else(|| "en-US".into())));
+        // Mobile phone window size (CDP metrics applied after attach)
+        let is_mobile = profile.fingerprint.os.is_mobile()
+            || profile.fingerprint.client_hints.mobile
+            || FingerprintTemplate::parse(&profile.fingerprint.template)
+                .map(|t| t.is_mobile())
+                .unwrap_or(false);
+        if is_mobile {
+            args.push(format!(
+                "--window-size={},{}",
+                profile.fingerprint.screen.width,
+                profile.fingerprint.screen.height + 80
+            ));
+        }
         if let Some(url) = &req.start_url {
             args.push(url.clone());
         } else {
@@ -540,6 +553,33 @@ impl OpenAntyService {
 
         if self.config.experimental_js_stealth {
             let _ = inject_stealth_init(&cdp_ws_url).await;
+        }
+
+        // Mobile / phone simulation via CDP Emulation APIs
+        let is_mobile = profile.fingerprint.os.is_mobile()
+            || profile.fingerprint.client_hints.mobile
+            || FingerprintTemplate::parse(&profile.fingerprint.template)
+                .map(|t| t.is_mobile())
+                .unwrap_or(false);
+        if is_mobile {
+            let fp = &profile.fingerprint;
+            if let Err(e) = crate::cdp_page::apply_mobile_emulation(
+                &cdp_ws_url,
+                fp.screen.width,
+                fp.screen.height,
+                fp.screen.device_pixel_ratio,
+                &fp.user_agent,
+                &fp.platform,
+                &fp.languages,
+                fp.max_touch_points,
+                true,
+                &fp.client_hints.model,
+                &fp.client_hints.ua_full_version,
+            )
+            .await
+            {
+                tracing::warn!("mobile emulation apply failed: {e}");
+            }
         }
 
         let now = Utc::now();

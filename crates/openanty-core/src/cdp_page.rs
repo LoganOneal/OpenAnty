@@ -279,6 +279,155 @@ pub async fn page_type(cdp_ws: &str, selector: &str, text: &str) -> Result<(), S
     Ok(())
 }
 
+/// Apply CDP mobile device emulation from fingerprint-like dimensions / UA.
+pub async fn apply_mobile_emulation(
+    cdp_ws: &str,
+    width: u32,
+    height: u32,
+    device_scale_factor: f64,
+    user_agent: &str,
+    platform: &str,
+    languages: &[String],
+    max_touch_points: u32,
+    mobile: bool,
+    model: &str,
+    ua_full_version: &str,
+) -> Result<(), String> {
+    let (mut write, mut read, sid) = open_page_target(cdp_ws).await?;
+    let _ = session_call(&mut write, &mut read, 60, &sid, "Page.enable", json!({})).await;
+    let _ = session_call(&mut write, &mut read, 61, &sid, "Network.enable", json!({})).await;
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        62,
+        &sid,
+        "Emulation.setDeviceMetricsOverride",
+        json!({
+            "width": width,
+            "height": height,
+            "deviceScaleFactor": device_scale_factor,
+            "mobile": mobile,
+            "screenWidth": width,
+            "screenHeight": height,
+        }),
+    )
+    .await?;
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        63,
+        &sid,
+        "Emulation.setTouchEmulationEnabled",
+        json!({
+            "enabled": mobile || max_touch_points > 0,
+            "maxTouchPoints": max_touch_points.max(1),
+        }),
+    )
+    .await;
+    let accept_lang = if languages.is_empty() {
+        "en-US,en;q=0.9".to_string()
+    } else {
+        let mut parts = Vec::new();
+        for (i, l) in languages.iter().enumerate() {
+            if i == 0 {
+                parts.push(l.clone());
+            } else {
+                let q = (10 - i.min(9)) as f64 / 10.0;
+                parts.push(format!("{l};q={q}"));
+            }
+        }
+        parts.join(",")
+    };
+    let ua = user_agent.to_string();
+    let major = ua_full_version
+        .split('.')
+        .next()
+        .unwrap_or("130")
+        .to_string();
+    let plat = if mobile { "Linux armv8l" } else { platform };
+    let ua_params = json!({
+        "userAgent": ua,
+        "acceptLanguage": accept_lang,
+        "platform": plat,
+    });
+    // Network + Emulation overrides (both for max compatibility)
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        64,
+        &sid,
+        "Network.setUserAgentOverride",
+        ua_params.clone(),
+    )
+    .await;
+    let meta = json!({
+        "brands": [
+            { "brand": "Chromium", "version": major },
+            { "brand": "Google Chrome", "version": major },
+            { "brand": "Not_A Brand", "version": "24" }
+        ],
+        "fullVersionList": [
+            { "brand": "Chromium", "version": ua_full_version },
+            { "brand": "Google Chrome", "version": ua_full_version },
+            { "brand": "Not_A Brand", "version": "10.0.0.24" }
+        ],
+        "fullVersion": ua_full_version,
+        "platform": if mobile { "Android" } else { "Windows" },
+        "platformVersion": if mobile { "14.0.0" } else { "15.0.0" },
+        "architecture": if mobile { "" } else { "x86" },
+        "model": model,
+        "mobile": mobile,
+        "bitness": "64",
+        "wow64": false
+    });
+    let mut emu = ua_params;
+    emu["userAgentMetadata"] = meta;
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        66,
+        &sid,
+        "Emulation.setUserAgentOverride",
+        emu,
+    )
+    .await;
+
+    // Persist UA/touch/platform for navigations via init script (hardens flaky CDP UA).
+    let touch = max_touch_points.max(if mobile { 5 } else { 0 });
+    let init = format!(
+        r#"(function(){{
+  try {{
+    Object.defineProperty(navigator, 'userAgent', {{ get: () => {ua} }});
+    Object.defineProperty(navigator, 'platform', {{ get: () => {plat} }});
+    Object.defineProperty(navigator, 'maxTouchPoints', {{ get: () => {touch} }});
+    Object.defineProperty(navigator, 'webdriver', {{ get: () => undefined }});
+  }} catch(e) {{}}
+}})();"#,
+        ua = serde_json::to_string(&ua).unwrap_or_else(|_| "\"\"".into()),
+        plat = serde_json::to_string(plat).unwrap_or_else(|_| "\"\"".into()),
+        touch = touch,
+    );
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        67,
+        &sid,
+        "Page.addScriptToEvaluateOnNewDocument",
+        json!({ "source": init }),
+    )
+    .await;
+    let _ = session_call(
+        &mut write,
+        &mut read,
+        68,
+        &sid,
+        "Runtime.evaluate",
+        json!({ "expression": init, "returnByValue": true }),
+    )
+    .await;
+    Ok(())
+}
+
 /// Run a JavaScript expression in the page context and return the value as JSON.
 pub async fn page_evaluate(cdp_ws: &str, expression: &str) -> Result<Value, String> {
     let (mut write, mut read, sid) = open_page_target(cdp_ws).await?;

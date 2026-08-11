@@ -58,6 +58,13 @@ pub fn router(service: Arc<OpenAntyService>) -> Router {
         .route("/v1/users", get(list_users).post(add_user))
         .route("/v1/users/{id}", delete(delete_user))
         .route("/v1/fingerprint/health", post(fp_health))
+        // Native page control (same as MCP page_* tools)
+        .route("/v1/sessions/{id}/page/navigate", post(page_navigate))
+        .route("/v1/sessions/{id}/page/content", post(page_content))
+        .route("/v1/sessions/{id}/page/links", post(page_links))
+        .route("/v1/sessions/{id}/page/evaluate", post(page_evaluate))
+        .route("/v1/sessions/{id}/page/click", post(page_click))
+        .route("/v1/sessions/{id}/page/type", post(page_type))
         // AdsPower-compatible shim subset
         .route("/browser/list", get(adspower_list))
         .route("/browser/start", get(adspower_start))
@@ -764,6 +771,192 @@ async fn fp_health(
     host_ok(&headers)?;
     auth(&headers, &state.service)?;
     Ok(Json(state.service.fingerprint_health_sample()))
+}
+
+async fn session_cdp(
+    state: &AppState,
+    id: &str,
+) -> Result<String, ApiError> {
+    let ses = state
+        .service
+        .get_session(id)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))?;
+    ses.cdp_ws_url
+        .filter(|u| !u.is_empty())
+        .ok_or_else(|| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::InvalidRequest, "session has no cdp_ws_url"),
+                OpenAntyService::request_id(),
+            )
+        })
+}
+
+#[derive(Deserialize)]
+struct PageNavBody {
+    url: String,
+}
+
+async fn page_navigate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageNavBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    let page = openanty_core::cdp_page::page_navigate(&cdp, &body.url)
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({
+        "ok": true,
+        "session_id": id,
+        "url": page.url,
+        "title": page.title,
+        "content_type": page.content_type,
+        "content": page.content,
+        "content_length": page.content.len()
+    })))
+}
+
+#[derive(Deserialize)]
+struct PageContentBody {
+    mode: Option<String>,
+}
+
+async fn page_content(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageContentBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    let mode = body.mode.as_deref().unwrap_or("html");
+    let page = openanty_core::cdp_page::page_content(&cdp, mode)
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({
+        "ok": true,
+        "session_id": id,
+        "url": page.url,
+        "title": page.title,
+        "content_type": page.content_type,
+        "content": page.content,
+        "content_length": page.content.len()
+    })))
+}
+
+#[derive(Deserialize)]
+struct PageLinksBody {
+    same_host_only: Option<bool>,
+}
+
+async fn page_links(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageLinksBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    let links = openanty_core::cdp_page::page_links(&cdp, body.same_host_only.unwrap_or(true))
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({ "ok": true, "session_id": id, "count": links.len(), "links": links })))
+}
+
+#[derive(Deserialize)]
+struct PageEvalBody {
+    expression: String,
+}
+
+async fn page_evaluate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageEvalBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    let value = openanty_core::cdp_page::page_evaluate(&cdp, &body.expression)
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({ "ok": true, "session_id": id, "value": value })))
+}
+
+#[derive(Deserialize)]
+struct PageClickBody {
+    selector: String,
+}
+
+async fn page_click(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageClickBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    openanty_core::cdp_page::page_click(&cdp, &body.selector)
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({ "ok": true, "session_id": id, "clicked": body.selector })))
+}
+
+#[derive(Deserialize)]
+struct PageTypeBody {
+    selector: String,
+    text: String,
+}
+
+async fn page_type(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PageTypeBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    let cdp = session_cdp(&state, &id).await?;
+    openanty_core::cdp_page::page_type(&cdp, &body.selector, &body.text)
+        .await
+        .map_err(|e| {
+            ApiError::from_err(
+                OpenAntyError::app(ErrorCode::Internal, e),
+                OpenAntyService::request_id(),
+            )
+        })?;
+    Ok(Json(json!({ "ok": true, "session_id": id, "typed": true, "selector": body.selector })))
 }
 
 // —— AdsPower-compatible shim ——

@@ -8,6 +8,7 @@ pub enum OsFamily {
     Windows,
     Macos,
     Linux,
+    Android,
 }
 
 impl OsFamily {
@@ -16,7 +17,13 @@ impl OsFamily {
             Self::Windows => "windows",
             Self::Macos => "macos",
             Self::Linux => "linux",
+            Self::Android => "android",
         }
+    }
+
+    /// True for phone/tablet-style profiles that should get CDP mobile emulation.
+    pub fn is_mobile(self) -> bool {
+        matches!(self, Self::Android)
     }
 }
 
@@ -28,6 +35,8 @@ pub enum FingerprintTemplate {
     Win11ChromeHigh,
     MacosChromeMSeries,
     LinuxChromeGeneric,
+    /// Android Chrome on Pixel-class handset (CDP mobile emulation).
+    AndroidChromePixel,
     RandomCoherent,
 }
 
@@ -38,6 +47,7 @@ impl FingerprintTemplate {
             Self::Win11ChromeHigh => "win11_chrome_high",
             Self::MacosChromeMSeries => "macos_chrome_m_series",
             Self::LinuxChromeGeneric => "linux_chrome_generic",
+            Self::AndroidChromePixel => "android_chrome_pixel",
             Self::RandomCoherent => "random_coherent",
         }
     }
@@ -48,6 +58,9 @@ impl FingerprintTemplate {
             "win11_chrome_high" => Some(Self::Win11ChromeHigh),
             "macos_chrome_m_series" => Some(Self::MacosChromeMSeries),
             "linux_chrome_generic" => Some(Self::LinuxChromeGeneric),
+            "android_chrome_pixel" | "android_pixel" | "mobile_android" => {
+                Some(Self::AndroidChromePixel)
+            }
             "random_coherent" => Some(Self::RandomCoherent),
             _ => None,
         }
@@ -58,8 +71,13 @@ impl FingerprintTemplate {
             Self::Win11ChromeMid | Self::Win11ChromeHigh => OsFamily::Windows,
             Self::MacosChromeMSeries => OsFamily::Macos,
             Self::LinuxChromeGeneric => OsFamily::Linux,
+            Self::AndroidChromePixel => OsFamily::Android,
             Self::RandomCoherent => OsFamily::Windows,
         }
+    }
+
+    pub fn is_mobile(self) -> bool {
+        matches!(self, Self::AndroidChromePixel)
     }
 }
 
