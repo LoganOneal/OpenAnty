@@ -1,0 +1,19 @@
+[package]
+name = "ghostfox-fp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Constraint-based browser fingerprint generation for GhostFox"
+repository.workspace = true
+
+[dependencies]
+ghostfox-proto = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
