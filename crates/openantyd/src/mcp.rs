@@ -1,5 +1,7 @@
 //! Minimal MCP stdio server (JSON-RPC 2.0) for OpenAnty tools.
+//! Includes native CDP page control so agents do not need Playwright.
 
+use openanty_core::cdp_page;
 use openanty_core::OpenAntyService;
 use openanty_proto::*;
 use serde_json::{json, Value};
@@ -278,6 +280,106 @@ fn tool_defs() -> Vec<Value> {
             "Run local environment health checks",
             json!({ "type": "object", "properties": {} }),
         ),
+        tool(
+            "ensure_ready",
+            "Idempotent setup check for agents: data dir, API token, Chrome/Chromium, doctor. Call first before scraping.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "setup_scrape_profile",
+            "One-shot: create a scrape profile with optional proxy (http(s)|socks5://user:pass@host:port) and cookies. Returns profile_id ready for launch_session.",
+            json!({
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": { "type": "string", "description": "Profile name, e.g. scrape-domain.com" },
+                    "proxy": {
+                        "type": "string",
+                        "description": "Proxy URL: http://host:port or http://user:pass@host:port or socks5://..."
+                    },
+                    "cookies": {
+                        "type": "array",
+                        "description": "Cookie objects {name,value,domain,...} applied on next launch"
+                    },
+                    "tags": { "type": "array", "items": { "type": "string" } },
+                    "os": { "type": "string" },
+                    "template": { "type": "string" }
+                }
+            }),
+        ),
+        tool(
+            "page_navigate",
+            "Navigate the live session browser to a URL (native CDP, no Playwright). Returns page url/title/html snapshot.",
+            json!({
+                "type": "object",
+                "required": ["session_id", "url"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "url": { "type": "string" }
+                }
+            }),
+        ),
+        tool(
+            "page_content",
+            "Get current page content from a live session (html or text). Native CDP — no Playwright.",
+            json!({
+                "type": "object",
+                "required": ["session_id"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "mode": { "type": "string", "enum": ["html", "text"], "description": "Default html" }
+                }
+            }),
+        ),
+        tool(
+            "page_links",
+            "Extract links from the current page. Use same_host_only=true for domain-wide scrapes.",
+            json!({
+                "type": "object",
+                "required": ["session_id"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "same_host_only": { "type": "boolean", "description": "Default true" }
+                }
+            }),
+        ),
+        tool(
+            "page_evaluate",
+            "Run JavaScript in the page and return the JSON value. Native CDP.",
+            json!({
+                "type": "object",
+                "required": ["session_id", "expression"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "expression": { "type": "string", "description": "JS expression, e.g. document.title" }
+                }
+            }),
+        ),
+        tool(
+            "page_click",
+            "Click an element by CSS selector on the live session page.",
+            json!({
+                "type": "object",
+                "required": ["session_id", "selector"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "selector": { "type": "string" }
+                }
+            }),
+        ),
+        tool(
+            "page_type",
+            "Type text into an input matching a CSS selector (sets value + input event).",
+            json!({
+                "type": "object",
+                "required": ["session_id", "selector", "text"],
+                "properties": {
+                    "session_id": { "type": "string" },
+                    "selector": { "type": "string" },
+                    "text": { "type": "string" }
+                }
+            }),
+        ),
     ]
 }
 
@@ -463,6 +565,199 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
             .unwrap()
         }
         "doctor" => service.doctor(),
+        "ensure_ready" => {
+            let doctor = service.doctor();
+            let ready = doctor.get("ok") == Some(&json!(true));
+            json!({
+                "ok": ready,
+                "request_id": rid,
+                "ready": ready,
+                "data_dir": service.data_dir.display().to_string(),
+                "version": env!("CARGO_PKG_VERSION"),
+                "doctor": doctor,
+                "next_steps": if ready {
+                    json!([
+                        "setup_scrape_profile or create_profile",
+                        "optional apply_proxy / import_cookies",
+                        "launch_session",
+                        "page_navigate / page_links / page_content (no Playwright needed)",
+                        "stop_session"
+                    ])
+                } else {
+                    json!([
+                        "Install Google Chrome or Chromium",
+                        "Or set OPENANTY_BROWSER_PATH to a chromium binary",
+                        "Re-run ensure_ready / doctor"
+                    ])
+                },
+                "hint": "For agents: npx -y openanty@latest mcp"
+            })
+        }
+        "setup_scrape_profile" => {
+            let name = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or("name required")?
+                .to_string();
+            let mut tags: Vec<String> = args
+                .get("tags")
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            if !tags.iter().any(|t| t == "scrape") {
+                tags.push("scrape".into());
+            }
+            let req = CreateProfileRequest {
+                name: name.clone(),
+                template: args
+                    .get("template")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                os: args
+                    .get("os")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                proxy: None,
+                fingerprint_overrides: None,
+                tags: Some(tags),
+                notes: Some(format!("agent scrape profile: {name}")),
+            };
+            let profile = service.create_profile(req).map_err(|e| e.to_string())?;
+            let mut proxy_status = None;
+            let mut fingerprint_regenerated = false;
+            if let Some(proxy_str) = args.get("proxy").and_then(|v| v.as_str()) {
+                if !proxy_str.is_empty() {
+                    let proxy = parse_proxy_url(proxy_str).map_err(|e| e.to_string())?;
+                    let (p, status, regen) = service
+                        .apply_proxy(
+                            &profile.id,
+                            ApplyProxyRequest {
+                                proxy,
+                                align_geo: true,
+                                check: true,
+                            },
+                        )
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    proxy_status = Some(status);
+                    fingerprint_regenerated = regen;
+                    let _ = p;
+                }
+            }
+            let mut cookies_imported = 0u32;
+            let mut cookies_pending = false;
+            if let Some(cookies_val) = args.get("cookies") {
+                if !cookies_val.is_null() {
+                    let cookies: Vec<Cookie> =
+                        serde_json::from_value(cookies_val.clone()).map_err(|e| e.to_string())?;
+                    if !cookies.is_empty() {
+                        let (imported, _skipped, pending) = service
+                            .import_cookies(&profile.id, cookies, true)
+                            .map_err(|e| e.to_string())?;
+                        cookies_imported = imported;
+                        cookies_pending = pending;
+                    }
+                }
+            }
+            let profile = service
+                .get_profile(&profile.id, false)
+                .map_err(|e| e.to_string())?;
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "profile_id": profile.id,
+                "profile": profile,
+                "proxy_status": proxy_status,
+                "fingerprint_regenerated": fingerprint_regenerated,
+                "cookies_imported": cookies_imported,
+                "cookies_pending_apply": cookies_pending,
+                "next": "launch_session with this profile_id, then page_navigate / page_links / page_content"
+            })
+        }
+        "page_navigate" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let url = arg_str(&args, "url")?;
+            let cdp = session_cdp(&service, &session_id)?;
+            let page = cdp_page::page_navigate(&cdp, &url)
+                .await
+                .map_err(|e| e.to_string())?;
+            page_payload(rid, &session_id, page, None)
+        }
+        "page_content" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let mode = args
+                .get("mode")
+                .and_then(|v| v.as_str())
+                .unwrap_or("html");
+            let cdp = session_cdp(&service, &session_id)?;
+            let page = cdp_page::page_content(&cdp, mode)
+                .await
+                .map_err(|e| e.to_string())?;
+            page_payload(rid, &session_id, page, None)
+        }
+        "page_links" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let same_host = args
+                .get("same_host_only")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let cdp = session_cdp(&service, &session_id)?;
+            let links = cdp_page::page_links(&cdp, same_host)
+                .await
+                .map_err(|e| e.to_string())?;
+            let count = links.len();
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "session_id": session_id,
+                "same_host_only": same_host,
+                "count": count,
+                "links": links
+            })
+        }
+        "page_evaluate" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let expression = arg_str(&args, "expression")?;
+            let cdp = session_cdp(&service, &session_id)?;
+            let value = cdp_page::page_evaluate(&cdp, &expression)
+                .await
+                .map_err(|e| e.to_string())?;
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "session_id": session_id,
+                "value": value
+            })
+        }
+        "page_click" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let selector = arg_str(&args, "selector")?;
+            let cdp = session_cdp(&service, &session_id)?;
+            cdp_page::page_click(&cdp, &selector)
+                .await
+                .map_err(|e| e.to_string())?;
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "session_id": session_id,
+                "clicked": selector
+            })
+        }
+        "page_type" => {
+            let session_id = arg_str(&args, "session_id")?;
+            let selector = arg_str(&args, "selector")?;
+            let text = arg_str(&args, "text")?;
+            let cdp = session_cdp(&service, &session_id)?;
+            cdp_page::page_type(&cdp, &selector, &text)
+                .await
+                .map_err(|e| e.to_string())?;
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "session_id": session_id,
+                "typed": true,
+                "selector": selector
+            })
+        }
         other => return Err(format!("unknown tool: {other}")),
     };
 
@@ -474,4 +769,94 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
         "structuredContent": payload,
         "isError": payload.get("ok") == Some(&json!(false))
     }))
+}
+
+fn arg_str(args: &Value, key: &str) -> Result<String, String> {
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("{key} required"))
+}
+
+fn session_cdp(service: &OpenAntyService, session_id: &str) -> Result<String, String> {
+    let ses = service.get_session(session_id).map_err(|e| e.to_string())?;
+    ses.cdp_ws_url
+        .filter(|u| !u.is_empty())
+        .ok_or_else(|| "session has no cdp_ws_url (not running or already stopped)".into())
+}
+
+fn page_payload(
+    rid: String,
+    session_id: &str,
+    page: cdp_page::PageResult,
+    extra: Option<Value>,
+) -> Value {
+    let mut out = json!({
+        "ok": true,
+        "request_id": rid,
+        "session_id": session_id,
+        "url": page.url,
+        "title": page.title,
+        "content_type": page.content_type,
+        "content": page.content,
+        "content_length": page.content.len()
+    });
+    if let Some(Value::Object(map)) = extra {
+        if let Some(obj) = out.as_object_mut() {
+            for (k, v) in map {
+                obj.insert(k, v);
+            }
+        }
+    }
+    out
+}
+
+/// Parse proxy URLs used by agents: `http://user:pass@host:port`, `socks5://host:port`, or bare `host:port`.
+fn parse_proxy_url(raw: &str) -> Result<ProxyConfig, String> {
+    let s = raw.trim();
+    if s.is_empty() {
+        return Err("empty proxy string".into());
+    }
+    // Already structured JSON-ish path not used; URL form only.
+    let (scheme, rest) = if let Some(idx) = s.find("://") {
+        (&s[..idx], &s[idx + 3..])
+    } else {
+        ("http", s)
+    };
+    let scheme = scheme.to_ascii_lowercase();
+    if !matches!(
+        scheme.as_str(),
+        "http" | "https" | "socks5" | "socks5h" | "socks4"
+    ) {
+        return Err(format!("unsupported proxy scheme: {scheme}"));
+    }
+    let (userinfo, hostport) = if let Some(at) = rest.rfind('@') {
+        (Some(&rest[..at]), &rest[at + 1..])
+    } else {
+        (None, rest)
+    };
+    let hostport = hostport.trim_end_matches('/');
+    if hostport.is_empty() {
+        return Err("proxy host:port missing".into());
+    }
+    let (username, password) = if let Some(ui) = userinfo {
+        if let Some(colon) = ui.find(':') {
+            (
+                Some(ui[..colon].to_string()),
+                Some(ui[colon + 1..].to_string()),
+            )
+        } else {
+            (Some(ui.to_string()), None)
+        }
+    } else {
+        (None, None)
+    };
+    let server = format!("{scheme}://{hostport}");
+    Ok(ProxyConfig {
+        server,
+        username,
+        password,
+        check_timeout_ms: 8000,
+        check_url: None,
+    })
 }
