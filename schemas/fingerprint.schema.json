@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ghostfox.dev/schemas/fingerprint.schema.json",
+  "title": "GhostFox FingerprintDocument",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "template",
+    "os",
+    "user_agent",
+    "binary_major_required",
+    "languages",
+    "timezone",
+    "screen",
+    "hardware_concurrency",
+    "device_memory",
+    "webgl",
+    "fonts_set_id",
+    "webrtc_policy",
+    "client_hints",
+    "noise"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "template": { "type": "string" },
+    "os": { "type": "string", "enum": ["windows", "macos", "linux"] },
+    "user_agent": { "type": "string", "minLength": 1 },
+    "binary_major_required": { "type": "integer", "minimum": 50, "maximum": 300 },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "timezone": { "type": "string", "minLength": 1 },
+    "screen": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 320 },
+        "height": { "type": "integer", "minimum": 240 }
+      }
+    },
+    "hardware_concurrency": { "type": "integer", "minimum": 1, "maximum": 256 },
+    "device_memory": { "type": "number", "exclusiveMinimum": 0 },
+    "webgl": {
+      "type": "object",
+      "required": ["vendor", "renderer"]
+    },
+    "fonts_set_id": { "type": "string" },
+    "webrtc_policy": {
+      "type": "string",
+      "enum": ["disable", "public_only", "proxy", "default"]
+    },
+    "client_hints": { "type": "object" },
+    "noise": {
+      "type": "object",
+      "required": ["canvas", "audio"]
+    }
+  },
+  "additionalProperties": true
+}
