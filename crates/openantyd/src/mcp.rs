@@ -466,6 +466,41 @@ fn tool_defs() -> Vec<Value> {
                 }
             }),
         ),
+        tool(
+            "mail_duck_connect",
+            "EXPERIMENTAL: Save DuckDuckGo Email Protection Bearer token (unofficial API). Obtain from duckduckgo.com/email Autofill → DevTools Network → Generate Private Duck Address → Authorization Bearer.",
+            json!({
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                    "token": { "type": "string", "description": "Bearer token (with or without 'Bearer ' prefix)" },
+                    "personal_address": { "type": "string", "description": "Optional name@duck.com" }
+                }
+            }),
+        ),
+        tool(
+            "mail_duck_status",
+            "Whether a DuckDuckGo email token is configured (token never fully returned).",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_duck_disconnect",
+            "Remove saved DuckDuckGo token.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_create_alias",
+            "Create a new alias address. Providers: duckduckgo (private @duck.com via unofficial API), gmail_plus (you+tag@gmail.com). OTPs still arrive on the forward/Gmail inbox — use mail_wait_otp.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "description": "duckduckgo (default) | gmail_plus"
+                    }
+                }
+            }),
+        ),
     ]
 }
 
@@ -979,6 +1014,27 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
                 ],
                 "alternative": "Or configure BYO Gmail: mail_connect with an App Password, then mail_wait_otp"
             })
+        }
+        "mail_duck_connect" => {
+            let token = arg_str(&args, "token")?;
+            service
+                .mail_duck_connect(
+                    &token,
+                    args.get("personal_address").and_then(|v| v.as_str()),
+                )
+                .map_err(|e| e.to_string())?
+        }
+        "mail_duck_status" => service.mail_duck_status().map_err(|e| e.to_string())?,
+        "mail_duck_disconnect" => service.mail_duck_disconnect().map_err(|e| e.to_string())?,
+        "mail_create_alias" => {
+            let provider = args
+                .get("provider")
+                .and_then(|v| v.as_str())
+                .unwrap_or("duckduckgo");
+            service
+                .mail_create_alias(provider)
+                .await
+                .map_err(|e| e.to_string())?
         }
         other => return Err(format!("unknown tool: {other}")),
     };

@@ -104,6 +104,23 @@ enum MailCmd {
         #[arg(long, default_value_t = 5)]
         poll: u64,
     },
+    /// Save DuckDuckGo Bearer token (unofficial / experimental)
+    DuckConnect {
+        /// Token or use env OPENANTY_DDG_TOKEN
+        #[arg(long, env = "OPENANTY_DDG_TOKEN")]
+        token: Option<String>,
+        #[arg(long)]
+        personal: Option<String>,
+    },
+    /// DuckDuckGo token status
+    DuckStatus,
+    /// Remove DuckDuckGo token
+    DuckDisconnect,
+    /// Create alias: duckduckgo | gmail_plus
+    CreateAlias {
+        #[arg(long, default_value = "duckduckgo")]
+        provider: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -354,6 +371,45 @@ async fn main() -> Result<()> {
                         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
                     println!("{}", serde_json::to_string_pretty(&res)?);
                     if !res.found {
+                        std::process::exit(2);
+                    }
+                }
+                MailCmd::DuckConnect { token, personal } => {
+                    let token = token
+                        .or_else(|| std::env::var("OPENANTY_DDG_TOKEN").ok())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("token required via --token or OPENANTY_DDG_TOKEN")
+                        })?;
+                    let res = svc
+                        .mail_duck_connect(&token, personal.as_deref())
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                MailCmd::DuckStatus => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_duck_status()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::DuckDisconnect => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_duck_disconnect()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::CreateAlias { provider } => {
+                    let res = svc
+                        .mail_create_alias(&provider)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                    if res.get("ok") != Some(&serde_json::json!(true)) {
                         std::process::exit(2);
                     }
                 }

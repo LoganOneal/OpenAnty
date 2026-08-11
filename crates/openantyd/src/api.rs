@@ -71,6 +71,10 @@ pub fn router(service: Arc<OpenAntyService>) -> Router {
         .route("/v1/mail/disconnect", post(mail_disconnect))
         .route("/v1/mail/list", get(mail_list))
         .route("/v1/mail/wait-otp", post(mail_wait_otp))
+        .route("/v1/mail/duck/status", get(mail_duck_status))
+        .route("/v1/mail/duck/connect", post(mail_duck_connect))
+        .route("/v1/mail/duck/disconnect", post(mail_duck_disconnect))
+        .route("/v1/mail/create-alias", post(mail_create_alias))
         // AdsPower-compatible shim subset
         .route("/browser/list", get(adspower_list))
         .route("/browser/start", get(adspower_start))
@@ -1057,6 +1061,72 @@ async fn mail_wait_otp(
     state
         .service
         .mail_wait_otp(body)
+        .await
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_duck_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_duck_status()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct DuckConnectBody {
+    token: String,
+    personal_address: Option<String>,
+}
+
+async fn mail_duck_connect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<DuckConnectBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_duck_connect(&body.token, body.personal_address.as_deref())
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_duck_disconnect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_duck_disconnect()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct CreateAliasBody {
+    provider: Option<String>,
+}
+
+async fn mail_create_alias(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<CreateAliasBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_create_alias(body.provider.as_deref().unwrap_or("duckduckgo"))
         .await
         .map(Json)
         .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))

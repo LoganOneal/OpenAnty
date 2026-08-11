@@ -1285,6 +1285,129 @@ impl OpenAntyService {
         Ok(crate::mail::wait_for_otp(account, req).await)
     }
 
+    // —— DuckDuckGo private @duck.com (experimental / unofficial) ——
+
+    pub fn mail_duck_status(&self) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        match crate::mail_duck::load_token(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+        {
+            Some(t) => Ok(t.public_status()),
+            None => Ok(serde_json::json!({
+                "ok": true,
+                "configured": false,
+                "provider": "duckduckgo",
+                "experimental": true,
+                "hint": "mail_duck_connect with Bearer token from https://duckduckgo.com/email Autofill → DevTools Network → Generate Private Duck Address"
+            })),
+        }
+    }
+
+    pub fn mail_duck_connect(
+        &self,
+        token: &str,
+        personal_address: Option<&str>,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let token = crate::mail_duck::normalize_token(token);
+        if token.is_empty() {
+            return Err(OpenAntyError::app(
+                ErrorCode::InvalidRequest,
+                "token required",
+            ));
+        }
+        let duck = crate::mail_duck::DuckToken {
+            token,
+            personal_address: personal_address.map(|s| s.to_string()),
+            saved_at: Utc::now(),
+        };
+        let key = self.mail_key()?;
+        crate::mail_duck::save_token(&self.data_dir, &key, &duck)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        self.store.audit("mail.duck_connect", "mail", "duckduckgo", "{}");
+        Ok(serde_json::json!({
+            "ok": true,
+            "configured": true,
+            "status": duck.public_status(),
+            "next": "mail_create_alias provider=duckduckgo → use address on signup → mail_wait_otp on forward inbox"
+        }))
+    }
+
+    pub fn mail_duck_disconnect(&self) -> Result<serde_json::Value, OpenAntyError> {
+        crate::mail_duck::clear_token(&self.data_dir)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        Ok(serde_json::json!({ "ok": true, "configured": false, "provider": "duckduckgo" }))
+    }
+
+    pub async fn mail_create_alias(
+        &self,
+        provider: &str,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let provider = provider.to_lowercase();
+        match provider.as_str() {
+            "duckduckgo" | "duck" | "ddg" => {
+                let key = self.mail_key()?;
+                let duck = crate::mail_duck::load_token(&self.data_dir, &key)
+                    .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+                    .ok_or_else(|| {
+                        OpenAntyError::app(
+                            ErrorCode::NotInitialized,
+                            "DuckDuckGo token not configured",
+                        )
+                        .with_hint("mail_duck_connect with Bearer token first")
+                    })?;
+                let result = crate::mail_duck::generate_private_address(&duck.token).await;
+                Ok(serde_json::json!({
+                    "ok": result.ok,
+                    "provider": "duckduckgo",
+                    "address": result.address,
+                    "local_part": result.local_part,
+                    "error": result.error,
+                    "hint": result.hint,
+                    "experimental": true,
+                    "raw": result.raw,
+                }))
+            }
+            "gmail_plus" | "gmail+" | "plus" => {
+                // Free Gmail +alias without external API
+                let key = self.mail_key()?;
+                let account = crate::mail::load_account(&self.data_dir, &key)
+                    .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+                    .ok_or_else(|| {
+                        OpenAntyError::app(ErrorCode::NotInitialized, "mail not configured")
+                            .with_hint("mail_connect Gmail first, then mail_create_alias gmail_plus")
+                    })?;
+                let user = account.username;
+                let (local, domain) = user
+                    .split_once('@')
+                    .ok_or_else(|| {
+                        OpenAntyError::app(ErrorCode::InvalidRequest, "invalid gmail username")
+                    })?;
+                // Strip existing +tag
+                let base = local.split('+').next().unwrap_or(local);
+                let tag: String = {
+                    use rand::Rng;
+                    const C: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
+                    let mut rng = rand::thread_rng();
+                    (0..8)
+                        .map(|_| C[rng.gen_range(0..C.len())] as char)
+                        .collect()
+                };
+                let address = format!("{base}+{tag}@{domain}");
+                Ok(serde_json::json!({
+                    "ok": true,
+                    "provider": "gmail_plus",
+                    "address": address,
+                    "hint": "Same Gmail inbox; filter mail_wait_otp with to_contains of the +tag"
+                }))
+            }
+            other => Err(OpenAntyError::app(
+                ErrorCode::InvalidRequest,
+                format!("unknown alias provider: {other}"),
+            )
+            .with_hint("Use duckduckgo or gmail_plus")),
+        }
+    }
+
     pub async fn synchronizer_navigate(
         &self,
         master_session_id: &str,
