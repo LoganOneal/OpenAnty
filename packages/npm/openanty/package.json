@@ -1,0 +1,44 @@
+{
+  "name": "openanty",
+  "version": "0.1.1",
+  "description": "Open Anty — agent-first antidetect browser control (MCP + CLI). Install via npx for Claude/Cursor.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LoganOneal/OpenAnty.git"
+  },
+  "homepage": "https://github.com/LoganOneal/OpenAnty#readme",
+  "bugs": {
+    "url": "https://github.com/LoganOneal/OpenAnty/issues"
+  },
+  "keywords": [
+    "openanty",
+    "open-anty",
+    "antidetect",
+    "browser",
+    "mcp",
+    "claude",
+    "agent",
+    "cdp",
+    "fingerprint",
+    "scraping"
+  ],
+  "bin": {
+    "openanty": "bin/openanty.js",
+    "openantyd": "bin/openantyd.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "prepack": "node -e \"console.log('pack openanty', require('./package.json').version)\""
+  },
+  "preferGlobal": false
+}

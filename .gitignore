@@ -15,6 +15,10 @@ Thumbs.db
 master.key
 recovery.key
 
+# npm binary cache (downloaded at postinstall)
+packages/npm/openanty/vendor/
+packages/npm/openanty/node_modules/
+
 # Installer build outputs
 packaging/out/
 packaging/windows/obj/

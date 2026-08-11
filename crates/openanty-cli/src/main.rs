@@ -28,8 +28,12 @@ enum Commands {
     },
     /// Print MCP configuration snippet for Claude / Cursor / Grok
     McpConfig {
+        /// Binary name when not using --npx (default: openantyd)
         #[arg(long, default_value = "openantyd")]
         command: String,
+        /// Emit npx-based config (best for agents / zero local install)
+        #[arg(long)]
+        npx: bool,
     },
     /// Profile operations
     Profile {
@@ -141,10 +145,25 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Commands::McpConfig { command } => {
+        Commands::McpConfig { command, npx } => {
             let data_dir = data_dir.display().to_string().replace('\\', "\\\\");
-            println!(
-                r#"{{
+            if npx {
+                println!(
+                    r#"{{
+  "mcpServers": {{
+    "openanty": {{
+      "command": "npx",
+      "args": ["-y", "openanty@latest", "mcp"],
+      "env": {{
+        "OPENANTY_DATA_DIR": "{data_dir}"
+      }}
+    }}
+  }}
+}}"#
+                );
+            } else {
+                println!(
+                    r#"{{
   "mcpServers": {{
     "openanty": {{
       "command": "{command}",
@@ -155,7 +174,11 @@ async fn main() -> Result<()> {
     }}
   }}
 }}"#
-            );
+                );
+            }
+            eprintln!();
+            eprintln!("Tip: for agents with Node, prefer: openanty mcp-config --npx");
+            eprintln!("Or run directly: npx -y openanty@latest mcp");
         }
         Commands::Status => {
             let svc = open_svc(data_dir)?;

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Agent-first install:** npm package `packages/npm/openanty` — `npx -y openanty@latest mcp` downloads GitHub Release binaries
+- **Native MCP page tools** (no Playwright): `page_navigate`, `page_content`, `page_links`, `page_evaluate`, `page_click`, `page_type`
+- **Intent tools:** `ensure_ready`, `setup_scrape_profile` (proxy URL + cookies in one call)
+- Docs: [FEATURE_GAP_AND_AGENT_FIRST.md](docs/FEATURE_GAP_AND_AGENT_FIRST.md), [skills/scrape-domain.md](docs/skills/scrape-domain.md)
+- CLI: `openanty mcp-config --npx`
+
 ## 0.1.0 — 2026-08-10
 
 ### Added
