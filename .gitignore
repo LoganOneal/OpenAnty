@@ -33,6 +33,11 @@ packaging/windows/obj/
 .ghostfox-data*/
 .openantry-data*/
 .openanty-data*/
+.openanty-e2e*/
+.openanty-e2e-*/
+.release-dl/
+e2e-*.txt
+e2e-results*.txt
 .chrome-test-ud/
 e2e-*.txt
 e2e-*.json
