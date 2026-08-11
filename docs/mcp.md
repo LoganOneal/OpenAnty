@@ -1,9 +1,9 @@
-# OpenAntry MCP Server
+# OpenAnty MCP Server
 
 ## Run
 
 ```bash
-openantryd mcp
+openantyd mcp
 ```
 
 MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC (MCP 2024-11-05).
@@ -13,8 +13,8 @@ MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC
 ```json
 {
   "mcpServers": {
-    "openantry": {
-      "command": "C:\\path\\to\\openantryd.exe",
+    "openanty": {
+      "command": "C:\\path\\to\\openantyd.exe",
       "args": ["mcp"]
     }
   }
@@ -24,7 +24,7 @@ MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC
 Generate a snippet with:
 
 ```bash
-openantry mcp-config
+openanty mcp-config
 ```
 
 ## Tool contract

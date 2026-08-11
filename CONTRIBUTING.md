@@ -1,4 +1,4 @@
-# Contributing to OpenAntry
+# Contributing to OpenAnty
 
 Thanks for helping build an open, agent-first antidetect platform.
 
@@ -7,7 +7,7 @@ Thanks for helping build an open, agent-first antidetect platform.
 ```bash
 cargo build --workspace
 cargo test --workspace
-cargo run -p openantry-cli -- init
+cargo run -p openanty-cli -- init
 ```
 
 ## Commit style

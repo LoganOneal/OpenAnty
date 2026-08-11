@@ -1,0 +1,22 @@
+[package]
+name = "openanty-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Open Anty command-line client"
+repository.workspace = true
+
+[[bin]]
+name = "openanty"
+path = "src/main.rs"
+
+[dependencies]
+openanty-proto = { workspace = true }
+openanty-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+dirs = { workspace = true }

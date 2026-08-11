@@ -1,6 +1,6 @@
 # Responsible Use
 
-OpenAntry is an open-source, local-first multi-profile browser automation platform.
+OpenAnty is an open-source, local-first multi-profile browser automation platform.
 It is intended for legitimate, lawful use only.
 
 ## Allowed uses
@@ -13,7 +13,7 @@ It is intended for legitimate, lawful use only.
 
 ## Disallowed uses
 
-Do **not** use OpenAntry to:
+Do **not** use OpenAnty to:
 
 - Commit fraud, identity theft, or financial crime
 - Operate mule / stolen accounts or credential stuffing
@@ -23,7 +23,7 @@ Do **not** use OpenAntry to:
 
 ## No guarantees
 
-Browser detection evolves continuously. OpenAntry **does not guarantee**
+Browser detection evolves continuously. OpenAnty **does not guarantee**
 undetectability on any site. Always comply with applicable laws and the
 terms of services you interact with.
 

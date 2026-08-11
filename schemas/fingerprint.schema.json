@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://OpenAntry.dev/schemas/fingerprint.schema.json",
-  "title": "OpenAntry FingerprintDocument",
+  "$id": "https://OpenAnty.dev/schemas/fingerprint.schema.json",
+  "title": "OpenAnty FingerprintDocument",
   "type": "object",
   "required": [
     "schema_version",
