@@ -54,7 +54,7 @@ impl MasterKey {
         std::fs::write(
             &recovery_path,
             format!(
-                "OpenAnty recovery key — SAVE THIS OFFLINE, then delete this file.\n\n{recovery}\n"
+                "Open Anty recovery key — SAVE THIS OFFLINE, then delete this file.\n\n{recovery}\n"
             ),
         )?;
 

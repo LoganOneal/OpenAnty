@@ -56,12 +56,15 @@ impl OpenAntyService {
     }
 
     pub fn open_existing(data_dir: PathBuf) -> Result<Self, OpenAntyError> {
-        if !data_dir.join("OpenAnty.db").exists() && !data_dir.join("api.token").exists() {
+        if !data_dir.join("openanty.db").exists()
+            && !data_dir.join("OpenAnty.db").exists() // legacy misnamed file
+            && !data_dir.join("api.token").exists()
+        {
             return Err(OpenAntyError::app(
                 ErrorCode::NotInitialized,
-                "OpenAnty not initialized — run `OpenAnty init` first",
+                "Open Anty not initialized — run `openanty init` first",
             )
-            .with_hint("OpenAnty init"));
+            .with_hint("openanty init"));
         }
         Self::init(data_dir).map(|(s, _)| s)
     }
@@ -353,17 +356,28 @@ impl OpenAntyService {
             .ok_or_else(|| OpenAntyError::app(ErrorCode::ProfileNotFound, "profile not found"))?;
 
         if let Some(existing) = &profile.lock_session_id {
-            if !req.force {
+            let mut should_takeover = req.force;
+            if !should_takeover {
                 if let Ok(Some(ses)) = self.store.get_session(existing) {
                     if matches!(ses.status, SessionStatus::Running | SessionStatus::Starting) {
-                        return Err(OpenAntyError::app(
-                            ErrorCode::SessionAlreadyRunning,
-                            format!("session {existing} already running"),
-                        )
-                        .with_hint("pass force=true to takeover or stop_session first"));
+                        // If CDP is dead, treat as crashed and reclaim automatically.
+                        let alive = if let Some(port) = ses.debug_port {
+                            cdp_port_alive(port).await
+                        } else {
+                            false
+                        };
+                        if alive {
+                            return Err(OpenAntyError::app(
+                                ErrorCode::SessionAlreadyRunning,
+                                format!("session {existing} already running"),
+                            )
+                            .with_hint("pass force=true to takeover or stop_session first"));
+                        }
+                        should_takeover = true;
                     }
                 }
-            } else {
+            }
+            if should_takeover {
                 let _ = self.stop_session(existing).await;
                 profile = self
                     .store
@@ -790,6 +804,20 @@ fn fastrand_port(start: u16, end: u16) -> u16 {
     start + rand::thread_rng().gen_range(0..=span)
 }
 
+async fn cdp_port_alive(port: u16) -> bool {
+    let url = format!("http://127.0.0.1:{port}/json/version");
+    let client = match reqwest::Client::builder()
+        .timeout(StdDuration::from_millis(500))
+        .connect_timeout(StdDuration::from_millis(300))
+        .no_proxy()
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    matches!(client.get(&url).send().await, Ok(r) if r.status().is_success())
+}
+
 async fn wait_for_cdp(port: u16, attempts: u32) -> Result<String, String> {
     let url = format!("http://127.0.0.1:{port}/json/version");
     let client = reqwest::Client::builder()
@@ -823,27 +851,44 @@ async fn wait_for_cdp(port: u16, attempts: u32) -> Result<String, String> {
 }
 
 async fn apply_cookies_cdp(cdp_ws: &str, cookies: &[Cookie]) -> Result<u32, String> {
-    // Use HTTP endpoint for cookies when possible via /json — fallback: simple fetch to Network domain needs WS.
-    // Minimal approach: open WS and send Network.setCookie for each.
     use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::{connect_async, tungstenite::Message};
 
-    let (ws, _) = connect_async(cdp_ws)
+    let connect = tokio::time::timeout(StdDuration::from_secs(3), connect_async(cdp_ws))
+        .await
+        .map_err(|_| "cdp connect timeout".to_string())?
+        .map_err(|e| e.to_string())?;
+    let (ws, _) = connect;
+    let (mut write, mut read) = ws.split();
+
+    // Enable Network domain before setCookie (required on modern Chrome).
+    let enable = serde_json::json!({"id": 1, "method": "Network.enable", "params": {}});
+    write
+        .send(Message::Text(enable.to_string().into()))
         .await
         .map_err(|e| e.to_string())?;
-    let (mut write, mut read) = ws.split();
+    let _ = tokio::time::timeout(StdDuration::from_millis(800), read.next()).await;
+
     let mut applied = 0u32;
-    let mut id = 1i64;
+    let mut id = 2i64;
     for c in cookies {
-        let params = serde_json::json!({
+        let same_site = match c.same_site.as_deref() {
+            Some("Strict") | Some("strict") => "Strict",
+            Some("None") | Some("none") => "None",
+            _ => "Lax",
+        };
+        let mut params = serde_json::json!({
             "name": c.name,
             "value": c.value,
             "domain": c.domain,
-            "path": c.path,
+            "path": if c.path.is_empty() { "/".into() } else { c.path.clone() },
             "secure": c.secure,
             "httpOnly": c.http_only,
-            "sameSite": c.same_site.clone().unwrap_or_else(|| "Lax".into()),
+            "sameSite": same_site,
         });
+        if c.expires > 0.0 {
+            params["expires"] = serde_json::json!(c.expires);
+        }
         let msg = serde_json::json!({
             "id": id,
             "method": "Network.setCookie",
@@ -853,14 +898,18 @@ async fn apply_cookies_cdp(cdp_ws: &str, cookies: &[Cookie]) -> Result<u32, Stri
             .send(Message::Text(msg.to_string().into()))
             .await
             .map_err(|e| e.to_string())?;
-        // Wait for matching response briefly
         let deadline = tokio::time::Instant::now() + StdDuration::from_secs(2);
         while tokio::time::Instant::now() < deadline {
             match tokio::time::timeout(StdDuration::from_millis(500), read.next()).await {
                 Ok(Some(Ok(Message::Text(t)))) => {
                     if let Ok(v) = serde_json::from_str::<serde_json::Value>(&t) {
                         if v.get("id").and_then(|x| x.as_i64()) == Some(id) {
-                            if v.get("result").is_some() {
+                            // success: result.success == true (Chrome) or result present
+                            let ok = v
+                                .pointer("/result/success")
+                                .and_then(|x| x.as_bool())
+                                .unwrap_or_else(|| v.get("result").is_some() && v.get("error").is_none());
+                            if ok {
                                 applied += 1;
                             }
                             break;

@@ -1,0 +1,40 @@
+{
+  "id": "ses_0ecbfe58cf8e40dea364afcf3f7e7139",
+  "profile_id": "prf_e76a6f21eabf469fa112c901b49cfb9b",
+  "status": "running",
+  "cdp_ws_url": "ws://127.0.0.1:9253/devtools/browser/8fe1a078-e029-4445-bd78-49aba7dac2a9",
+  "debug_port": 9253,
+  "headed": false,
+  "expires_at": "2026-08-11T07:38:11.359340700Z",
+  "connect": {
+    "javascript": "const { chromium } = require('playwright');\nconst browser = await chromium.connectOverCDP('ws://127.0.0.1:9253/devtools/browser/8fe1a078-e029-4445-bd78-49aba7dac2a9');",
+    "python": "from playwright.async_api import async_playwright\nasync with async_playwright() as p:\n    browser = await p.chromium.connect_over_cdp('ws://127.0.0.1:9253/devtools/browser/8fe1a078-e029-4445-bd78-49aba7dac2a9')"
+  },
+  "proxy_status": {
+    "configured": false,
+    "ok": true
+  },
+  "fingerprint_summary": {
+    "os": "Windows 15.0.0",
+    "browser": "Chrome/130",
+    "template": "win11_chrome_mid",
+    "fingerprint_hash": "sha256:9d26cb92fe41f595cffb8b245491b2ad1b09917e7c25b80c64249994804f44a9",
+    "enforcement": "stock",
+    "warnings": [
+      "document_only:canvas",
+      "document_only:webgl",
+      "enforcement:stock"
+    ],
+    "consistency": {
+      "ok": true,
+      "warnings": [],
+      "errors": []
+    }
+  },
+  "cookies_applied": {
+    "attempted": 1,
+    "applied": 0,
+    "failed": 1
+  },
+  "started_at": "2026-08-11T06:38:11.359340700Z"
+}

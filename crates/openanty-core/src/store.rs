@@ -48,7 +48,12 @@ pub struct SessionRow {
 impl Store {
     pub fn open(data_dir: &Path, key: MasterKey) -> Result<Self, String> {
         crate::paths::ensure_dir(data_dir).map_err(|e| e.to_string())?;
-        let db_path = data_dir.join("OpenAnty.db");
+        let db_path = data_dir.join("openanty.db");
+        // Migrate legacy misnamed DB from rebrand glitch
+        let legacy = data_dir.join("OpenAnty.db");
+        if !db_path.exists() && legacy.exists() {
+            let _ = std::fs::rename(&legacy, &db_path);
+        }
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
         conn.execute_batch(
             r#"

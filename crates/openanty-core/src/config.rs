@@ -55,7 +55,7 @@ impl Config {
         paths::ensure_dir(data_dir)?;
         let path = data_dir.join("config.toml");
         let text = format!(
-            r#"# OpenAnty daemon configuration
+            r#"# Open Anty daemon configuration
 bind = "{}"
 sessions_cap = {}
 cdp_port_start = {}
@@ -129,7 +129,7 @@ pub fn read_or_create_token(data_dir: &Path) -> std::io::Result<String> {
     if path.exists() {
         return std::fs::read_to_string(path).map(|s| s.trim().to_string());
     }
-    let token = format!("gf_{}", uuid::Uuid::new_v4().simple());
+    let token = format!("oa_{}", uuid::Uuid::new_v4().simple());
     std::fs::write(&path, &token)?;
     Ok(token)
 }

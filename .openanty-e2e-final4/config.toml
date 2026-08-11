@@ -1,0 +1,9 @@
+# Open Anty daemon configuration
+bind = "127.0.0.1:3847"
+sessions_cap = 5
+cdp_port_start = 9222
+cdp_port_end = 9321
+max_session_ttl_seconds = 86400
+allow_lan = false
+experimental_js_stealth = false
+

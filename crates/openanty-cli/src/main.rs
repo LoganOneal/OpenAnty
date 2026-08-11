@@ -106,7 +106,7 @@ async fn main() -> Result<()> {
         Commands::Init => {
             let (svc, recovery) = OpenAntyService::init(data_dir.clone())
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-            println!("Initialized OpenAnty at {}", svc.data_dir.display());
+            println!("Initialized Open Anty at {}", svc.data_dir.display());
             println!("API token: {}", svc.token);
             println!("Token file: {}", svc.data_dir.join("api.token").display());
             if let Some(r) = recovery {
@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
-                println!("OpenAnty doctor — ok={}", report["ok"]);
+                println!("Open Anty doctor — ok={}", report["ok"]);
                 if let Some(checks) = report["checks"].as_array() {
                     for c in checks {
                         let pass = c["pass"].as_bool().unwrap_or(false);

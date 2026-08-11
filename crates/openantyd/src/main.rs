@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser, Debug)]
-#[command(name = "openantyd", version, about = "OpenAnty local antidetect daemon")]
+#[command(name = "openantyd", version, about = "Open Anty local antidetect daemon")]
 struct Cli {
     #[arg(long, global = true, env = "OPENANTY_DATA_DIR")]
     data_dir: Option<PathBuf>,
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     let data_dir = cli.data_dir.unwrap_or_else(paths::data_dir);
     let service = Arc::new(
         OpenAntyService::open_existing(data_dir.clone()).or_else(|_| {
-            tracing::info!("initializing OpenAnty data dir at {}", data_dir.display());
+            tracing::info!("initializing Open Anty data dir at {}", data_dir.display());
             OpenAntyService::init(data_dir.clone()).map(|(s, recovery)| {
                 if let Some(r) = recovery {
                     eprintln!("=== SAVE THIS RECOVERY KEY OFFLINE ===");
@@ -79,7 +79,7 @@ async fn serve(service: Arc<OpenAntyService>) -> Result<()> {
 
     let app = api::router(service.clone());
     let addr: SocketAddr = bind.parse().context("invalid bind address")?;
-    tracing::info!("OpenAnty API listening on http://{addr}");
+    tracing::info!("Open Anty API listening on http://{addr}");
     tracing::info!("data_dir={}", service.data_dir.display());
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
