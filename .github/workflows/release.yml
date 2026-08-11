@@ -71,16 +71,28 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }} -p openantyd -p openanty-cli
 
-      - name: Stage package
+      - name: Stage package + bare binaries
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p dist
           STAGE="dist/${{ matrix.asset_name }}"
           mkdir -p "$STAGE/bin"
           EXT=""
           if [[ "${{ matrix.os }}" == windows-latest ]]; then EXT=".exe"; fi
-          cp "target/${{ matrix.target }}/release/openanty${EXT}" "$STAGE/bin/"
-          cp "target/${{ matrix.target }}/release/openantyd${EXT}" "$STAGE/bin/"
+          SRC_CLI="target/${{ matrix.target }}/release/openanty${EXT}"
+          SRC_D="target/${{ matrix.target }}/release/openantyd${EXT}"
+          cp "$SRC_CLI" "$STAGE/bin/"
+          cp "$SRC_D" "$STAGE/bin/"
+          # Loose binaries for the Releases page (named by platform so they don't collide)
+          # e.g. openanty-windows-x64.exe , openantyd-windows-x64.exe
+          PLATFORM="${{ matrix.asset_name }}"
+          PLATFORM="${PLATFORM#OpenAnty-}"   # windows-x64 | linux-x64 | macos-arm64 | macos-x64
+          cp "$SRC_CLI" "dist/openanty-${PLATFORM}${EXT}"
+          cp "$SRC_D" "dist/openantyd-${PLATFORM}${EXT}"
+          if [[ -z "$EXT" ]]; then
+            chmod +x "dist/openanty-${PLATFORM}" "dist/openantyd-${PLATFORM}"
+          fi
           cp README.md LICENSE RESPONSIBLE_USE.md "$STAGE/"
           cp docs/quick-start.md "$STAGE/QUICKSTART.md"
           if [[ -n "$EXT" ]]; then
@@ -89,6 +101,7 @@ jobs:
             cp packaging/install.sh "$STAGE/install.sh"
             chmod +x "$STAGE/install.sh" "$STAGE/bin/openanty" "$STAGE/bin/openantyd"
           fi
+          ls -la dist/
 
       - name: Archive (zip)
         if: matrix.archive == 'zip'
@@ -112,6 +125,8 @@ jobs:
           path: |
             dist/*.zip
             dist/*.tar.gz
+            dist/openanty-*
+            dist/openantyd-*
           if-no-files-found: error
 
   publish:
@@ -124,14 +139,17 @@ jobs:
         with:
           path: release-assets
 
-      - name: Flatten archives
+      - name: Flatten archives and bare binaries
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p upload
-          find release-assets -type f \( -name '*.zip' -o -name '*.tar.gz' \) -exec cp -v {} upload/ \;
+          # Archives + platform-named bare binaries (openanty-*.exe, openantyd-*, etc.)
+          find release-assets -type f \( \
+            -name '*.zip' -o -name '*.tar.gz' -o \
+            -name 'openanty-*' -o -name 'openantyd-*' \
+          \) -exec cp -v {} upload/ \;
           ls -la upload
-          # checksums
           cd upload
           sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
           cat SHA256SUMS.txt

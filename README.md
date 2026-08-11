@@ -68,9 +68,10 @@ Primary distribution is an **easy installer**, not `cargo build`:
 
 Prebuilt binaries are on **[GitHub Releases](https://github.com/LoganOneal/OpenAnty/releases)** — published only when we cut a version tag (not on every CI build).
 
-1. Download `OpenAnty-windows-x64.zip` (or linux/macos archive)
-2. Unzip → run `INSTALL.ps1` / `install.sh` or put `bin/` on `PATH`
-3. `openanty doctor`
+1. Download **`openanty-windows-x64.exe`** and **`openantyd-windows-x64.exe`** from the release  
+   (or the full `OpenAnty-windows-x64.zip` if you want docs + install script)
+2. Put them on your `PATH` (optional rename to `openanty.exe` / `openantyd.exe`)
+3. `openanty init` then `openanty doctor`
 
 Maintainers: [docs/releasing.md](docs/releasing.md) (`git tag v0.1.0 && git push origin v0.1.0`)
 

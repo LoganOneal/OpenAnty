@@ -9,13 +9,19 @@ After a successful release, the release page has archives like:
 
 | Asset | Platform |
 | --- | --- |
-| `OpenAnty-windows-x64.zip` | Windows x64 |
-| `OpenAnty-linux-x64.tar.gz` | Linux x64 |
-| `OpenAnty-macos-arm64.tar.gz` | Apple Silicon |
-| `OpenAnty-macos-x64.tar.gz` | Intel Mac |
+| **`openanty-windows-x64.exe`** | Windows CLI (direct download) |
+| **`openantyd-windows-x64.exe`** | Windows daemon / MCP (direct download) |
+| `openanty-linux-x64` / `openantyd-linux-x64` | Linux bare binaries |
+| `openanty-macos-arm64` / `openantyd-macos-arm64` | Apple Silicon bare binaries |
+| `openanty-macos-x64` / `openantyd-macos-x64` | Intel Mac bare binaries |
+| `OpenAnty-windows-x64.zip` | Full portable folder (recommended) |
+| `OpenAnty-linux-x64.tar.gz` | Full portable folder |
+| `OpenAnty-macos-*.tar.gz` | Full portable folders |
 | `SHA256SUMS.txt` | Checksums |
 
-Each archive contains:
+**Quick start (Windows):** download `openanty-windows-x64.exe` + `openantyd-windows-x64.exe`, rename to `openanty.exe` / `openantyd.exe` if you like, put them on PATH.
+
+Full archives contain:
 
 ```
 bin/openanty(.exe)
