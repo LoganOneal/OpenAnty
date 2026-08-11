@@ -1,5 +1,7 @@
-# Build a portable OpenAnty folder suitable for zip distribution and installer staging.
-# Easy installer requirement (G11): this script is the Windows packaging entry point.
+# Build a portable Open Anty folder for local testing / installer staging.
+# Official downloadable GitHub Release binaries are produced by:
+#   .github/workflows/release.yml  (only on v* tags — not every CI run)
+# See docs/releasing.md
 
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
@@ -20,26 +22,7 @@ Copy-Item "$Root\README.md" $Out
 Copy-Item "$Root\LICENSE" $Out
 Copy-Item "$Root\RESPONSIBLE_USE.md" $Out
 Copy-Item "$Root\docs\quick-start.md" (Join-Path $Out "QUICKSTART.md")
-
-$InstallPs1 = @"
-# OpenAnty portable first-run
-`$ErrorActionPreference = 'Stop'
-`$Bin = Join-Path `$PSScriptRoot 'bin'
-`$env:PATH = "`$Bin;`$env:PATH"
-Write-Host 'Initializing OpenAnty...'
-& "`$Bin\openanty.exe" init
-Write-Host ''
-Write-Host 'Doctor:'
-& "`$Bin\openanty.exe" doctor
-Write-Host ''
-Write-Host 'MCP config snippet:'
-& "`$Bin\openanty.exe" mcp-config
-Write-Host ''
-Write-Host 'Done. Add bin\ to PATH or use full path to openanty.exe / openantyd.exe'
-"@
-Set-Content -Path (Join-Path $Out "INSTALL.ps1") -Value $InstallPs1 -Encoding UTF8
-
-# Stage Inno Setup script path note
+Copy-Item "$Root\packaging\INSTALL.ps1" (Join-Path $Out "INSTALL.ps1")
 Copy-Item "$PSScriptRoot\OpenAnty.iss" $Out -ErrorAction SilentlyContinue
 
 Write-Host "==> Portable bundle: $Out"

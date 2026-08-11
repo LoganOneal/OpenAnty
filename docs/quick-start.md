@@ -1,14 +1,15 @@
 # OpenAnty Quick Start
 
-## Install (easy path — when release assets exist)
+## Install (easy path — GitHub Release)
 
-1. Download **OpenAnty Setup** for your OS from GitHub Releases.  
-2. Run the installer (double-click).  
-3. Finish the first-run wizard (save the recovery key).  
-4. Run **OpenAnty Doctor** from the Start Menu (or `openanty doctor`).  
-5. Copy the MCP snippet into Claude / Cursor / Grok.
+1. Open [GitHub Releases](https://github.com/LoganOneal/OpenAnty/releases) and download the zip/tarball for your OS.  
+2. Unzip the archive.  
+3. Windows: run `INSTALL.ps1` (or `bin\openanty.exe init`). macOS/Linux: `chmod +x install.sh bin/* && ./install.sh`.  
+4. Save the recovery key when prompted.  
+5. Run `openanty doctor`, then `openanty mcp-config` for Claude / Cursor / Grok.
 
-Target: **≤ 10 minutes** from download to a green doctor check (excluding browser download).
+Target: **≤ 10 minutes** from download to a green doctor check.  
+Maintainers: see [releasing.md](releasing.md) — releases are tag-only, not every CI build.
 
 ## Install (from source)
 

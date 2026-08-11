@@ -1,5 +1,8 @@
 name: CI
 
+# Runs on every push/PR — tests only. Does NOT create GitHub Releases.
+# Releases are handled by release.yml when you push a v* tag.
+
 on:
   push:
     branches: [main, master]
@@ -27,19 +30,3 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace -- -D warnings
         continue-on-error: true
-
-  portable-windows:
-    runs-on: windows-latest
-    needs: test
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build portable
-        shell: pwsh
-        run: .\packaging\windows\build-portable.ps1
-      - name: Upload portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenAnty-windows-x64-portable
-          path: packaging/out/OpenAnty-windows-x64

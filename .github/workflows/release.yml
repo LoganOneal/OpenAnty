@@ -1,0 +1,161 @@
+# Build downloadable binaries ONLY when you publish a version tag (or run manually).
+# CI on push/PR does NOT create GitHub Releases.
+#
+# How to cut a release:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+# Or: GitHub → Releases → Draft a new release → choose tag v0.1.0 → Publish
+#   (if the tag already exists and was pushed, this workflow already ran on tag push)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (e.g. v0.1.0). Leave empty to use github.ref_name."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: OpenAnty-windows-x64
+            archive: zip
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: OpenAnty-linux-x64
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: OpenAnty-macos-arm64
+            archive: tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            asset_name: OpenAnty-macos-x64
+            archive: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Build release binaries
+        shell: bash
+        run: |
+          cargo build --release --target ${{ matrix.target }} -p openantyd -p openanty-cli
+
+      - name: Stage package
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="dist/${{ matrix.asset_name }}"
+          mkdir -p "$STAGE/bin"
+          EXT=""
+          if [[ "${{ matrix.os }}" == windows-latest ]]; then EXT=".exe"; fi
+          cp "target/${{ matrix.target }}/release/openanty${EXT}" "$STAGE/bin/"
+          cp "target/${{ matrix.target }}/release/openantyd${EXT}" "$STAGE/bin/"
+          cp README.md LICENSE RESPONSIBLE_USE.md "$STAGE/"
+          cp docs/quick-start.md "$STAGE/QUICKSTART.md"
+          if [[ -n "$EXT" ]]; then
+            cp packaging/INSTALL.ps1 "$STAGE/INSTALL.ps1"
+          else
+            cp packaging/install.sh "$STAGE/install.sh"
+            chmod +x "$STAGE/install.sh" "$STAGE/bin/openanty" "$STAGE/bin/openantyd"
+          fi
+
+      - name: Archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\${{ matrix.asset_name }}" -DestinationPath "dist\${{ matrix.asset_name }}.zip" -Force
+          Get-ChildItem dist
+
+      - name: Archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          cd dist
+          tar -czf "${{ matrix.asset_name }}.tar.gz" "${{ matrix.asset_name }}"
+          ls -la
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Flatten archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upload
+          find release-assets -type f \( -name '*.zip' -o -name '*.tar.gz' \) -exec cp -v {} upload/ \;
+          ls -la upload
+          # checksums
+          cd upload
+          sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attach files to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Open Anty ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          generate_release_notes: true
+          files: |
+            upload/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

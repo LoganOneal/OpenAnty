@@ -66,13 +66,15 @@ curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3847/v1/system/status
 
 Primary distribution is an **easy installer**, not `cargo build`:
 
-| Platform | Artifact |
-| --- | --- |
-| Windows | `OpenAnty-Setup-*.exe` (see `packaging/windows/`) |
-| macOS | DMG (planned) |
-| Linux | AppImage (planned) |
+Prebuilt binaries are on **[GitHub Releases](https://github.com/LoganOneal/OpenAnty/releases)** — published only when we cut a version tag (not on every CI build).
 
-Build a Windows portable bundle:
+1. Download `OpenAnty-windows-x64.zip` (or linux/macos archive)
+2. Unzip → run `INSTALL.ps1` / `install.sh` or put `bin/` on `PATH`
+3. `openanty doctor`
+
+Maintainers: [docs/releasing.md](docs/releasing.md) (`git tag v0.1.0 && git push origin v0.1.0`)
+
+Local portable build (no release):
 
 ```powershell
 .\packaging\windows\build-portable.ps1
@@ -97,10 +99,13 @@ crates/
   openanty-fp/      # fingerprint engine
   openanty-core/    # storage, sessions, proxy, cookies
   openantyd/        # daemon: REST + MCP
-  openanty-cli/     # `OpenAnty` CLI
-packaging/          # installers
-docs/               # guides
+  openanty-cli/     # `openanty` CLI
+packaging/          # portable / installer helpers
+docs/               # guides (see docs/releasing.md)
 DESIGN.md           # architecture & product design
+.github/workflows/
+  ci.yml            # test on every PR/push
+  release.yml       # binaries only on v* tags
 ```
 
 ## License

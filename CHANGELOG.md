@@ -5,6 +5,7 @@
 ### Added
 
 - Initial monorepo: `openanty-proto`, `openanty-fp`, `openanty-core`, `openantyd`, `openanty-cli`
+- Tag-based GitHub Release workflow (binaries only when publishing `v*` tags)
 - Constraint-based fingerprint generation and validation
 - Encrypted-at-rest profile secrets (XChaCha20-Poly1305)
 - Profile CRUD, cookie import/export, proxy check
