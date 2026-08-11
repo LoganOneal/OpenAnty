@@ -1,8 +1,8 @@
-# GhostFox
+# Open Antry
 
 **Local-first, agent-first open-source antidetect browser platform.**
 
-GhostFox lets you create isolated browser profiles with coherent fingerprints, bind proxies, import cookies, and hand AI agents (Claude, Grok, Cursor) a CDP WebSocket URL for Playwright/Puppeteer — primarily via **MCP**, with REST and CLI as peers.
+**Open Antry** lets you create isolated browser profiles with coherent fingerprints, bind proxies, import cookies, and hand AI agents (Claude, Grok, Cursor) a CDP WebSocket URL for Playwright/Puppeteer — primarily via **MCP**, with REST and CLI as peers.
 
 > Not affiliated with Google. Uses stock Chrome/Chromium (or your binary). Patched Chromium is planned; stealth claims are gated on that work. See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 
@@ -12,12 +12,12 @@ GhostFox lets you create isolated browser profiles with coherent fingerprints, b
 - Constraint-based fingerprint generation + validation
 - Session launch with CDP URL for Playwright
 - Local REST API (`127.0.0.1:3847`) + token auth
-- **MCP server** (`ghostfoxd mcp`) for agents
-- CLI (`ghostfox`) for humans and scripts
+- **MCP server** (`openantryd mcp`) for agents
+- CLI (`openantry`) for humans and scripts
 - Cookie import/export (applied via CDP on launch)
 - Proxy attach + health check
-- `ghostfox doctor` environment checks
-- Easy installer packaging (Windows script + Inno/NSIS stubs)
+- `openantry doctor` environment checks
+- Easy installer packaging (Windows script + Inno Setup stubs)
 
 ## Quick start (developers)
 
@@ -26,16 +26,16 @@ GhostFox lets you create isolated browser profiles with coherent fingerprints, b
 cargo build --release
 export PATH="$PWD/target/release:$PATH"   # or Windows: $env:PATH = "...\target\release;$env:PATH"
 
-ghostfox init
-ghostfox doctor
-ghostfox profile create "demo"
-ghostfox session launch <profile_id> --headless --start-url https://example.com
+openantry init
+openantry doctor
+openantry profile create "demo"
+openantry session launch <profile_id> --headless --start-url https://example.com
 ```
 
 ### MCP (Claude Desktop / Cursor / Grok)
 
 ```bash
-ghostfox mcp-config
+openantry mcp-config
 ```
 
 Paste into your MCP host config:
@@ -43,11 +43,11 @@ Paste into your MCP host config:
 ```json
 {
   "mcpServers": {
-    "ghostfox": {
-      "command": "ghostfoxd",
+    "openantry": {
+      "command": "openantryd",
       "args": ["mcp"],
       "env": {
-        "GHOSTFOX_DATA_DIR": "C:\\\\Users\\\\you\\\\AppData\\\\Roaming\\\\GhostFox"
+        "OPENANTRY_DATA_DIR": "C:\\\\Users\\\\you\\\\AppData\\\\Roaming\\\\OpenAntry"
       }
     }
   }
@@ -57,8 +57,8 @@ Paste into your MCP host config:
 ### REST API
 
 ```bash
-ghostfoxd serve
-# Authorization: Bearer $(cat %APPDATA%\GhostFox\api.token)
+openantryd serve
+# Authorization: Bearer $(cat %APPDATA%\OpenAntry\api.token)
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3847/v1/system/status
 ```
 
@@ -68,7 +68,7 @@ Primary distribution is an **easy installer**, not `cargo build`:
 
 | Platform | Artifact |
 | --- | --- |
-| Windows | `GhostFox-Setup-*.exe` (see `packaging/windows/`) |
+| Windows | `OpenAntry-Setup-*.exe` (see `packaging/windows/`) |
 | macOS | DMG (planned) |
 | Linux | AppImage (planned) |
 
@@ -93,11 +93,11 @@ See [docs/quick-start.md](docs/quick-start.md) and [DESIGN.md](DESIGN.md).
 
 ```
 crates/
-  ghostfox-proto/   # shared types & error codes
-  ghostfox-fp/      # fingerprint engine
-  ghostfox-core/    # storage, sessions, proxy, cookies
-  ghostfoxd/        # daemon: REST + MCP
-  ghostfox-cli/     # `ghostfox` CLI
+  openantry-proto/   # shared types & error codes
+  openantry-fp/      # fingerprint engine
+  openantry-core/    # storage, sessions, proxy, cookies
+  openantryd/        # daemon: REST + MCP
+  openantry-cli/     # `OpenAntry` CLI
 packaging/          # installers
 docs/               # guides
 DESIGN.md           # architecture & product design

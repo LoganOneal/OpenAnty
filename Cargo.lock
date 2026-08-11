@@ -581,96 +581,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ghostfox-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "dirs",
- "ghostfox-core",
- "ghostfox-proto",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "ghostfox-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "chacha20poly1305",
- "chrono",
- "dirs",
- "futures-util",
- "ghostfox-fp",
- "ghostfox-proto",
- "hex",
- "parking_lot",
- "rand 0.8.7",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "uuid",
- "which",
-]
-
-[[package]]
-name = "ghostfox-fp"
-version = "0.1.0"
-dependencies = [
- "ghostfox-proto",
- "hex",
- "rand 0.8.7",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "ghostfox-proto"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "schemars",
- "serde",
- "serde_json",
- "thiserror",
- "uuid",
-]
-
-[[package]]
-name = "ghostfoxd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "clap",
- "ghostfox-core",
- "ghostfox-proto",
- "serde",
- "serde_json",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1108,6 +1018,96 @@ name = "opaque-debug"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
+
+[[package]]
+name = "openantry-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dirs",
+ "openantry-core",
+ "openantry-proto",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "openantry-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "chacha20poly1305",
+ "chrono",
+ "dirs",
+ "futures-util",
+ "hex",
+ "openantry-fp",
+ "openantry-proto",
+ "parking_lot",
+ "rand 0.8.7",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "uuid",
+ "which",
+]
+
+[[package]]
+name = "openantry-fp"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "openantry-proto",
+ "rand 0.8.7",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "openantry-proto"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "openantryd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "openantry-core",
+ "openantry-proto",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
 
 [[package]]
 name = "option-ext"

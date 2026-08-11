@@ -1,4 +1,4 @@
-# Contributing to GhostFox
+# Contributing to OpenAntry
 
 Thanks for helping build an open, agent-first antidetect platform.
 
@@ -7,7 +7,7 @@ Thanks for helping build an open, agent-first antidetect platform.
 ```bash
 cargo build --workspace
 cargo test --workspace
-cargo run -p ghostfox-cli -- init
+cargo run -p openantry-cli -- init
 ```
 
 ## Commit style

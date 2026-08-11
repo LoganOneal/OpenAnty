@@ -1,12 +1,12 @@
-# GhostFox Design Document
+# OpenAntry Design Document
 
 **Local-first, agent-first open-source antidetect browser platform**
 
 | Field | Value |
 | --- | --- |
-| **Document title** | GhostFox Architecture & Product Design |
-| **Product name** | GhostFox (working name; alternatives considered: ProfileForge, AgentBrowser, ShadowProfile) |
-| **Author** | GhostFox maintainers (placeholder) |
+| **Document title** | OpenAntry Architecture & Product Design |
+| **Product name** | OpenAntry (working name; alternatives considered: ProfileForge, AgentBrowser, ShadowProfile) |
+| **Author** | OpenAntry maintainers (placeholder) |
 | **Date** | 2026-08-10 |
 | **Revised** | 2026-08-10 (revision 4 — easy installer is a hard product requirement) |
 | **Status** | Draft (revision 4) |
@@ -19,7 +19,7 @@
 
 Commercial antidetect browsers (AdsPower, Multilogin, Dolphin{anty}, GoLogin, Incogniton, BitBrowser) are optimized for human operators managing multi-account workflows through desktop UIs. AI agents need the inverse: a **programmable, local, isolated browser runtime** with structured session lifecycle, fingerprint-coherent profiles, proxy alignment, and first-class CDP/Playwright connectivity—exposed primarily through **MCP tools** and a local API, not a GUI.
 
-**GhostFox** is a local-first, open-source platform that:
+**OpenAntry** is a local-first, open-source platform that:
 
 1. Runs a **core daemon** on the user’s machine managing encrypted profile secrets, fingerprint generation, proxies, and browser processes.
 2. Exposes an **agent-first surface**: MCP server, OpenAPI REST (with optional AdsPower-compatible shims), CLI, and CDP WebSocket URLs for every live session.
@@ -105,7 +105,7 @@ Open-source stealth tooling has matured in parallel:
 | G8 | Automated fingerprint health checks (internal suite P0 post-session; public detectors P1) |
 | G9 | Bind to `127.0.0.1` by default; explicit opt-in for LAN; token auth default |
 | G10 | Daemon + browser support for Win/macOS/Linux **staggered** (Linux → Windows → macOS) |
-| **G11** | **Easy installer as primary install path** — non-developers install GhostFox with a double-click / guided wizard; no Rust toolchain required; post-install can run daemon, CLI, and MCP within minutes |
+| **G11** | **Easy installer as primary install path** — non-developers install OpenAntry with a double-click / guided wizard; no Rust toolchain required; post-install can run daemon, CLI, and MCP within minutes |
 
 ### Non-goals (v1 / explicit deferrals)
 
@@ -120,7 +120,7 @@ Open-source stealth tooling has matured in parallel:
 | NG7 | Perfect undetectability guarantees (impossible; we optimize pass rates and coherence) |
 | NG8 | Forking BoringSSL / custom TLS stacks that diverge JA3/JA4 from upstream Chromium |
 | NG9 | AdsPower cloud team APIs, billing portals, or non-local service API keys |
-| NG10 | Requiring end users to build from source or install a Rust toolchain to use GhostFox |
+| NG10 | Requiring end users to build from source or install a Rust toolchain to use OpenAntry |
 
 ### MVP stealth bar (acceptance)
 
@@ -139,13 +139,13 @@ Open-source stealth tooling has matured in parallel:
 ## Competitive Feature Matrix
 
 Legend: **Y** = supported, **P** = partial / limited, **N** = no / not core, **—** = unknown/N/A.  
-**GhostFox** columns: **v1** (Phases 0–2) and **later** (Phases 3–4+).
+**OpenAntry** columns: **v1** (Phases 0–2) and **later** (Phases 3–4+).
 
-> **Footnote:** Competitor cells are **best-effort from public product docs/marketing as of 2026-08**, not lab-verified. Param counts (e.g. Multilogin “55+”) may be marketing-inflated. GhostFox **Y (core)** for consistency means *open constraint rules + reject-on-inconsistent + health harness*, not that competitors have zero consistency logic.
+> **Footnote:** Competitor cells are **best-effort from public product docs/marketing as of 2026-08**, not lab-verified. Param counts (e.g. Multilogin “55+”) may be marketing-inflated. OpenAntry **Y (core)** for consistency means *open constraint rules + reject-on-inconsistent + health harness*, not that competitors have zero consistency logic.
 
 ### Core product & platforms
 
-| Feature | AdsPower | Multilogin | Dolphin{anty} | GoLogin | Incogniton | BitBrowser | GhostFox v1 | GhostFox later |
+| Feature | AdsPower | Multilogin | Dolphin{anty} | GoLogin | Incogniton | BitBrowser | OpenAntry v1 | OpenAntry later |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Desktop app (Win/macOS/Linux) | Y | Y | Y | Y | Y | Y | P (daemon+CLI; GUI Phase 3) | Y |
 | **Easy / one-click installer** | Y | Y | Y | Y | Y | Y | **Y (v1 requirement)** | Y |
@@ -162,13 +162,13 @@ Legend: **Y** = supported, **P** = partial / limited, **N** = no / not core, **�
 | Playwright/Puppeteer/Selenium | Y | Y | Y | Y | Y (CDP) | Y | Y (CDP-first) | Y |
 | Headless mode | P | Y | P | Y | P | P | Y | Y |
 | Default concurrent session caps | License-tiered | License-tiered | License-tiered | License-tiered | Tiered | Tiered | Config default 5 | same |
-| Profile export / machine transfer | Y | Y | Y (transfer) | Y | P | P | Y (`.ghostfox`) | Y + competitor import |
+| Profile export / machine transfer | Y | Y | Y (transfer) | Y | P | P | Y (`.OpenAntry`) | Y + competitor import |
 | Team RBAC / folders / audit | Y | Y | Y | Y | P | P | N | Y (local multi-user) |
 | Price model | Paid SaaS | Paid SaaS | Freemium | Freemium | Freemium | Low-cost | Free OSS | Free OSS |
 
 ### Fingerprint & isolation
 
-| Feature | AdsPower | Multilogin | Dolphin | GoLogin | Incogniton | BitBrowser | GhostFox v1 | later |
+| Feature | AdsPower | Multilogin | Dolphin | GoLogin | Incogniton | BitBrowser | OpenAntry v1 | later |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Tunable FP params count | 20–50+ | 55+ | ~20 | High | High | High | 25+ core | 50+ |
 | Auto “new fingerprint” | Y | Y | Y (1-click real) | Y | Y | Y | Y | Y |
@@ -195,7 +195,7 @@ Legend: **Y** = supported, **P** = partial / limited, **N** = no / not core, **�
 
 ### Network, automation, ops
 
-| Feature | AdsPower | Multilogin | Dolphin | GoLogin | Incogniton | BitBrowser | GhostFox v1 | later |
+| Feature | AdsPower | Multilogin | Dolphin | GoLogin | Incogniton | BitBrowser | OpenAntry v1 | later |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | HTTP(S) / SOCKS5 proxies | Y | Y | Y | Y | Y | Y | Y | Y |
 | SSH tunnel proxy | Y | P | P | P | P | P | N | P |
@@ -215,9 +215,9 @@ Legend: **Y** = supported, **P** = partial / limited, **N** = no / not core, **�
 
 ### Differentiation summary
 
-GhostFox wins on **agent-first design (MCP primary), local-first encryption of secrets, open source, open consistency rules with reject-on-inconsistent, fingerprint health testing as a product feature, and an easy installer parity with commercial tools**. Competitors may implement proprietary consistency; GhostFox differentiates by making rules, validation errors, and harness results agent-visible. It does **not** compete on cloud phones, proxy marketplaces, or enterprise cloud RBAC in v1. **Install must feel as easy as AdsPower/Dolphin** (download installer → wizard → ready), not like a Rust library.
+OpenAntry wins on **agent-first design (MCP primary), local-first encryption of secrets, open source, open consistency rules with reject-on-inconsistent, fingerprint health testing as a product feature, and an easy installer parity with commercial tools**. Competitors may implement proprietary consistency; OpenAntry differentiates by making rules, validation errors, and harness results agent-visible. It does **not** compete on cloud phones, proxy marketplaces, or enterprise cloud RBAC in v1. **Install must feel as easy as AdsPower/Dolphin** (download installer → wizard → ready), not like a Rust library.
 
-**Migration driver:** AdsPower Local API (default `http://local.adspower.net:50325` / localhost) is widely scripted; GhostFox’s optional shim lowers switching cost (see [AdsPower shim endpoint matrix](#adspower-local-api-shim-endpoint-matrix)).
+**Migration driver:** AdsPower Local API (default `http://local.adspower.net:50325` / localhost) is widely scripted; OpenAntry’s optional shim lowers switching cost (see [AdsPower shim endpoint matrix](#adspower-local-api-shim-endpoint-matrix)).
 
 ---
 
@@ -245,7 +245,7 @@ GhostFox wins on **agent-first design (MCP primary), local-first encryption of s
 | F-007 | Folders / groups | P2 |
 | F-008 | Tags, search, filters | P1 |
 | F-009 | Bulk create / delete / clone | P1 |
-| F-010 | Export/import profile package (`.ghostfox` archive) | P1 |
+| F-010 | Export/import profile package (`.OpenAntry` archive) | P1 |
 | F-011 | Import from AdsPower / Dolphin export formats | P3 |
 | F-012 | Optional cloud sync (out of band; design-only for v1) | P3 |
 
@@ -291,9 +291,9 @@ GhostFox wins on **agent-first design (MCP primary), local-first encryption of s
 | F-050 | Binary auto-update channel (daemon + browser) | P1 |
 | F-051 | **Easy platform installers** (Windows MSI/setup, macOS DMG, Linux AppImage) as **primary** distribution | **P0** (public v1 release gate) |
 | F-052 | Installer-driven first-run wizard (data dir, recovery key, API token, browser select/download) | **P0** |
-| F-053 | Post-install PATH registration for `ghostfoxd` / `ghostfox` CLI | **P0** |
+| F-053 | Post-install PATH registration for `openantryd` / `OpenAntry` CLI | **P0** |
 | F-054 | MCP config helper (generate Claude Desktop / Cursor / Grok snippet; optional one-click write) | **P0** |
-| F-055 | Optional “Start GhostFox at login” / tray helper (minimal; full GUI is Phase 3) | P1 |
+| F-055 | Optional “Start OpenAntry at login” / tray helper (minimal; full GUI is Phase 3) | P1 |
 | F-056 | Code-signed installers where certs available; SmartScreen/Gatekeeper guidance | P0/P1 |
 | F-057 | In-app / CLI self-update of daemon installer channel | P1 |
 | F-058 | Uninstaller that stops daemon, optional data-dir keep/delete | **P0** |
@@ -374,13 +374,13 @@ flowchart LR
   subgraph Agents
     Claude[Claude / Cursor / Grok]
     Script[Playwright scripts]
-    CLI[ghostfox CLI]
+    CLI[OpenAntry CLI]
   end
 
   subgraph Host["User machine (localhost)"]
     MCP[MCP Server stdio]
     REST[HTTP API 127.0.0.1:3847]
-    Daemon[ghostfoxd singleton]
+    Daemon[openantryd singleton]
     DB[(SQLite + encrypted blobs)]
     SM[Session Manager]
     B1[Chromium profile A]
@@ -410,9 +410,9 @@ flowchart LR
 
 #### Daemon singleton
 
-- Pidfile: `{data_dir}/ghostfoxd.pid` + lock on `{data_dir}/ghostfoxd.lock`.  
+- Pidfile: `{data_dir}/openantryd.pid` + lock on `{data_dir}/openantryd.lock`.  
 - Second instance: exit `ALREADY_RUNNING` and print existing API base URL from `{data_dir}/daemon.json`.  
-- Discovery: fixed default `http://127.0.0.1:3847`; override `GHOSTFOX_API_BASE` / `daemon.json`.
+- Discovery: fixed default `http://127.0.0.1:3847`; override `OPENANTRY_API_BASE` / `daemon.json`.
 
 #### Startup reconciliation
 
@@ -421,11 +421,11 @@ On daemon start:
 1. Load `sessions` where `status IN ('starting','running','stopping')`.  
 2. For each: if PID alive and listening on `debug_port` → mark `running`, refresh `cdp_ws_url` if needed.  
 3. If PID dead or port dead → mark `crashed` or `stopped`, clear lock on profile.  
-4. Scan port range for unexpected Chromium with GhostFox user-data-dir markers; adopt or kill orphans per config (`GHOSTFOX_ORPHAN_POLICY=kill|adopt|ignore`, default `kill`).
+4. Scan port range for unexpected Chromium with OpenAntry user-data-dir markers; adopt or kill orphans per config (`OPENANTRY_ORPHAN_POLICY=kill|adopt|ignore`, default `kill`).
 
 #### Port allocator
 
-- Range: **9222–9321** (100 ports), configurable `GHOSTFOX_CDP_PORT_RANGE`.  
+- Range: **9222–9321** (100 ports), configurable `OPENANTRY_CDP_PORT_RANGE`.  
 - Bind **only** `127.0.0.1` (never `0.0.0.0` for CDP).  
 - Algorithm: random free port in range → bind probe → retry up to 20; else `PORT_CONFLICT`.  
 - Exhaustion → `RESOURCE_LIMIT`.
@@ -518,7 +518,7 @@ Skill doc: `docs/skills/multi-session-scrape.md` (ships with MCP PR).
 
 ```json
 {
-  "$id": "ghostfox.ProxyConfig",
+  "$id": "OpenAntry.ProxyConfig",
   "type": "object",
   "required": ["server"],
   "properties": {
@@ -531,7 +531,7 @@ Skill doc: `docs/skills/multi-session-scrape.md` (ships with MCP PR).
     "check_timeout_ms": { "type": "integer", "default": 8000, "minimum": 1000, "maximum": 60000 },
     "check_url": {
       "type": "string",
-      "description": "Optional override IP-echo URL; must be in daemon allowlist unless GHOSTFOX_ALLOW_CUSTOM_CHECK_URL=1"
+      "description": "Optional override IP-echo URL; must be in daemon allowlist unless OpenAntry_ALLOW_CUSTOM_CHECK_URL=1"
     }
   },
   "additionalProperties": false
@@ -595,7 +595,7 @@ Skill doc: `docs/skills/multi-session-scrape.md` (ships with MCP PR).
 | Artifact | Location | Encryption |
 | --- | --- | --- |
 | Pending / last-known cookie set | Profile `cookies_blob` (ciphertext via libsodium) | P0 required |
-| Live browser cookies | Chromium process memory + its user-data-dir (opaque to GhostFox) | OS/browser |
+| Live browser cookies | Chromium process memory + its user-data-dir (opaque to OpenAntry) | OS/browser |
 
 #### Import
 
@@ -615,7 +615,7 @@ Used on:
 Order:
 
 1. Connect daemon CDP client to browser.  
-2. If `GHOSTFOX_EXPERIMENTAL_JS_STEALTH` and stock: install init script (once).  
+2. If `OPENANTRY_EXPERIMENTAL_JS_STEALTH` and stock: install init script (once).  
 3. For each cookie in pending blob: `Network.setCookie` (or `Storage.setCookies` batch where available).  
 4. **Do not** navigate to `start_url` until cookie apply finishes (or fails).  
 5. If `start_url` set: navigate after cookies.  
@@ -885,8 +885,8 @@ On partial live apply: `ok: false`, `error.code: "COOKIES_PARTIAL"`, `failed: [{
       "enum": ["win11_chrome_mid", "win11_chrome_high", "macos_chrome_m_series", "linux_chrome_generic", "random_coherent"]
     },
     "os": { "type": "string", "enum": ["windows", "macos", "linux"] },
-    "proxy": { "$ref": "ghostfox.ProxyConfig" },
-    "fingerprint_overrides": { "$ref": "ghostfox.FingerprintDocumentPartial" },
+    "proxy": { "$ref": "OpenAntry.ProxyConfig" },
+    "fingerprint_overrides": { "$ref": "OpenAntry.FingerprintDocumentPartial" },
     "tags": { "type": "array", "items": { "type": "string" }, "maxItems": 32 },
     "notes": { "type": "string", "maxLength": 4096 }
   }
@@ -919,7 +919,7 @@ On partial live apply: `ok: false`, `error.code: "COOKIES_PARTIAL"`, `failed: [{
   "required": ["profile_id", "proxy"],
   "properties": {
     "profile_id": { "type": "string" },
-    "proxy": { "$ref": "ghostfox.ProxyConfig" },
+    "proxy": { "$ref": "OpenAntry.ProxyConfig" },
     "align_geo": { "type": "boolean", "default": true },
     "check": { "type": "boolean", "default": true }
   }
@@ -948,8 +948,8 @@ If estimated runtime > 30s or `async: true`:
 
 | URI | Description |
 | --- | --- |
-| `ghostfox://sessions/{id}/cdp` | Current CDP WS URL text |
-| `ghostfox://profiles/{id}` | Profile JSON summary (no secrets) |
+| `OpenAntry://sessions/{id}/cdp` | Current CDP WS URL text |
+| `OpenAntry://profiles/{id}` | Profile JSON summary (no secrets) |
 
 #### MCP streamable HTTP (optional)
 
@@ -1005,7 +1005,7 @@ If estimated runtime > 30s or `async: true`:
 | Mode | Token required? |
 | --- | --- |
 | Default bind `127.0.0.1` | **Yes** (generated at first run; CLI/MCP read `api.token`) |
-| Dev escape | `GHOSTFOX_INSECURE_NO_TOKEN=1` only on loopback; logs loud warning |
+| Dev escape | `OPENANTRY_INSECURE_NO_TOKEN=1` only on loopback; logs loud warning |
 | LAN bind | Token **mandatory**; refuse start without token |
 
 **DNS rebinding mitigations:**
@@ -1024,7 +1024,7 @@ If estimated runtime > 30s or `async: true`:
 | Medium | `create_profile` fingerprint_summary only by default; full FP on explicit flag |
 | Low | `list_*`, `get_session` without cookies |
 
-MCP config supports `GHOSTFOX_MCP_ALLOWLIST=tool1,tool2` to hide high-sensitivity tools from agent hosts.
+MCP config supports `OpenAntry_MCP_ALLOWLIST=tool1,tool2` to hide high-sensitivity tools from agent hosts.
 
 ---
 
@@ -1088,7 +1088,7 @@ flowchart TD
 | Audio | Same as canvas for `audio.seed` |
 | Cross-major | Not guaranteed; bump may change noise implementation version `noise_algo_version` |
 | Algorithm (v1) | Seeded PRNG (ChaCha20) perturbs pixel/audio readback at fixed sample points; magnitude small; do not wrap `toDataURL` in JS if L0 patch exists |
-| Tests | Golden vectors in `ghostfox-fp` for fixed seeds |
+| Tests | Golden vectors in `openantry-fp` for fixed seeds |
 
 ### `fingerprint_hash` composition
 
@@ -1129,7 +1129,7 @@ Noise seeds live under included `canvas`/`audio` objects; therefore stable hash 
 
 | Catalog | Source | License / packaging |
 | --- | --- | --- |
-| Screens | Curated static JSON in-repo (`crates/ghostfox-fp/data/screens.json`) | Project Apache-2.0 |
+| Screens | Curated static JSON in-repo (`crates/openantry-fp/data/screens.json`) | Project Apache-2.0 |
 | WebGL pairs by OS | Curated static JSON (common ANGLE strings) | Apache-2.0 |
 | Font set_ids | Curated allowlists per OS | Apache-2.0 |
 | HW tiers | Static distributions | Apache-2.0 |
@@ -1151,11 +1151,11 @@ No network fetch required for generation. Update process: PR-reviewed data bumps
 | deviceMemory / hwConcurrency | Yes via patch or limited via flags | Host |
 | TLS JA3/JA4 | **Upstream Chromium only** (matches Chromium major, not necessarily Google Chrome branded builds) | — |
 
-Launch validates: if profile OS ≠ host OS and required engine capabilities missing → `BINARY_MISSING` capability error or soft-run with `warnings: ["host_leak_risk:webgl"]` depending on `GHOSTFOX_STRICT_FP=1` (default strict for patched binary; loose for stock).
+Launch validates: if profile OS ≠ host OS and required engine capabilities missing → `BINARY_MISSING` capability error or soft-run with `warnings: ["host_leak_risk:webgl"]` depending on `OPENANTRY_STRICT_FP=1` (default strict for patched binary; loose for stock).
 
 ### FingerprintDocument schema v1 (normative sketch)
 
-Full JSON Schema lives in `crates/ghostfox-proto/schemas/fingerprint.schema.json`. Versioning:
+Full JSON Schema lives in `crates/openantry-proto/schemas/fingerprint.schema.json`. Versioning:
 
 - **Additive** optional fields: same `schema_version`.  
 - **Breaking** removals/renames: increment `schema_version`; migrations in daemon.  
@@ -1238,9 +1238,9 @@ Only accept samples with explicit license, no PII, no collection from authentica
 
 | Track | Deliverable | Stealth marketing |
 | --- | --- | --- |
-| **P0 path** | Launch on system Chrome / Chromium / `GHOSTFOX_BROWSER_PATH` | No — “profile isolation + API” |
+| **P0 path** | Launch on system Chrome / Chromium / `OPENANTRY_BROWSER_PATH` | No — “profile isolation + API” |
 | **Phase 0 exit** | Patch prototype + baselines + go/no-go | Conditional |
-| **P1 default** | GhostFox Chromium builds signed where possible | Yes within MVP bar |
+| **P1 default** | OpenAntry Chromium builds signed where possible | Yes within MVP bar |
 
 ### Fingerprint application matrix (launch) — normative
 
@@ -1251,14 +1251,14 @@ Defines how each `FingerprintDocument` surface is **enforced** vs **document-onl
 - **L0** = C++ engine patch  
 - **CDP** = post-start DevTools  
 - **Doc-only** = stored for agents/health UI; **not** applied to browser in this mode  
-- **Strict** = `GHOSTFOX_STRICT_FP=1` behavior when enforcement missing  
+- **Strict** = `OPENANTRY_STRICT_FP=1` behavior when enforcement missing  
 
-| Field / surface | Stock / path (Phase 1 default) | Patched GhostFox Chromium | External engine (`GHOSTFOX_BROWSER_PATH`) | Strict-mode if unenforced |
+| Field / surface | Stock / path (Phase 1 default) | Patched OpenAntry Chromium | External engine (`OPENANTRY_BROWSER_PATH`) | Strict-mode if unenforced |
 | --- | --- | --- | --- | --- |
 | **Proxy** (`proxy_json`) | L1 `--proxy-server` / proxy auth extension as needed | Same L1 | Same if Chromium-like; else capabilities | `PROXY_*` / refuse launch if required proxy fails check |
 | **Language** (`navigator.language(s)`) | L1 `--lang`, prefs `intl.accept_languages` | L0+L1 | If `locale` capability | Soft warning stock; hard if foreign OS + strict |
 | **Timezone** | L1: set process `TZ` where effective; prefs / ICU where supported | L0 preferred + L1 | If `timezone` cap | Warning `host_tz_leak` if host TZ ≠ doc |
-| **userAgent** | L1 `--user-agent` **optional, weak** (CH mismatch risk)—default **omit** on stock unless `GHOSTFOX_STOCK_UA_FLAG=1` | L0 authoritative | If `ua` cap | Doc-only default stock; warning if overridden inconsistently |
+| **userAgent** | L1 `--user-agent` **optional, weak** (CH mismatch risk)—default **omit** on stock unless `OPENANTRY_STOCK_UA_FLAG=1` | L0 authoritative | If `ua` cap | Doc-only default stock; warning if overridden inconsistently |
 | **client_hints** | **Doc-only** + fill launch view for summary; no stock API | L0 **M4** | If `client_hints` cap | Strict: warning `document_only:client_hints` on stock |
 | **navigator.platform / hwConcurrency / deviceMemory / maxTouchPoints** | Doc-only (unless experimental JS stubs) | L0 | Per caps | `host_leak_risk:*` warnings; strict refuse foreign OS if missing caps |
 | **screen.*** | L1 window size ≈ screen when headed possible; full spoof doc-only | L0 | Per caps | Warning stock |
@@ -1267,7 +1267,7 @@ Defines how each `FingerprintDocument` surface is **enforced** vs **document-onl
 | **webgl vendor/renderer** | Doc-only | L0 **M7** | If `webgl_override` | `host_leak_risk:webgl` |
 | **fonts.set_id** | Doc-only | L0 **M8** | If `fonts` | `host_leak_risk:fonts` |
 | **plugins / mimeTypes** | Doc-only; optional experimental JS minimal list | L0 **M3** | Per caps | Warning |
-| **webdriver / chrome object** | CDP init if `GHOSTFOX_EXPERIMENTAL_JS_STEALTH=1` (weak) | L0 **M1–M3** | If `webdriver_patch` | Strict stock: warn `automation_leak_risk` |
+| **webdriver / chrome object** | CDP init if `OPENANTRY_EXPERIMENTAL_JS_STEALTH=1` (weak) | L0 **M1–M3** | If `webdriver_patch` | Strict stock: warn `automation_leak_risk` |
 | **webrtc.mode** | L1 flags/prefs best-effort (`--force-webrtc-ip-handling-policy=…` where valid) | L0 **M5** | Per caps | Warning if host leak possible |
 | **geo** | Not auto-granted; optional CDP emulation later | Same + patches if any | Per caps | N/A |
 | **media_devices / voices** | Doc-only (P1 enforcement) | P1 L0 | P1 | document_only |
@@ -1278,7 +1278,7 @@ Defines how each `FingerprintDocument` surface is **enforced** vs **document-onl
 - **Document-only (not stealth-enforced):** canvas, WebGL, fonts, full UA/CH coherence, most navigator hardware fields.  
 - Agents read `fingerprint_summary.warnings` and `enforcement` on every `SessionResult` to know what was real.
 
-**Capability negotiation:** Before apply, daemon intersects document fields with `features[]` on the selected binary. Missing feature → do not pretend L0 apply; emit structured warnings; if `GHOSTFOX_STRICT_FP=1` **and** profile OS ≠ host OS **and** required features for that OS claim absent → fail launch with `BINARY_MISSING` / capability error rather than silent host leak.
+**Capability negotiation:** Before apply, daemon intersects document fields with `features[]` on the selected binary. Missing feature → do not pretend L0 apply; emit structured warnings; if `OPENANTRY_STRICT_FP=1` **and** profile OS ≠ host OS **and** required features for that OS claim absent → fail launch with `BINARY_MISSING` / capability error rather than silent host leak.
 
 **Launch apply order (all engines):**
 
@@ -1336,12 +1336,12 @@ See [Cross-OS host isolation](#cross-os-host-isolation-launch-path). Phase 0 mus
 | Windows | Authenticode sign installer + `chrome.exe` if cert available; else document SmartScreen reputation ramp |
 | macOS | Hardened runtime + notarization for `.app`/dmg when Apple developer account exists |
 | Linux | checksums + optional sigstore/cosign on artifacts |
-| Unsigned dev builds | Clearly marked `unsigned-dev`; `ghostfox doctor` warns |
+| Unsigned dev builds | Clearly marked `unsigned-dev`; `openantry doctor` warns |
 
 ### Trademark / redistribution
 
 - Ship as **Chromium-based**; never claim “Google Chrome.”  
-- UA may say Chrome-compatible tokens as other antidetect tools do; README states GhostFox is not affiliated with Google.  
+- UA may say Chrome-compatible tokens as other antidetect tools do; README states OpenAntry is not affiliated with Google.  
 - Respect Chromium BSD license; publish offer for source corresponding to binaries; patch files in `browser/patches/`.
 
 ### Phase 0 go/no-go
@@ -1359,7 +1359,7 @@ See [Cross-OS host isolation](#cross-os-host-isolation-launch-path). Phase 0 mus
 
 ### Capability negotiation for external engines
 
-`GHOSTFOX_BROWSER_PATH` + `browser_capabilities.json`:
+`OPENANTRY_BROWSER_PATH` + `browser_capabilities.json`:
 
 ```json
 { "engine": "chromium|camoufox|unknown", "majors": [130], "features": ["webdriver_patch", "webgl_override"] }
@@ -1375,15 +1375,15 @@ Daemon merges capabilities into strict FP enforcement.
 
 | Component | Responsibility | Tech |
 | --- | --- | --- |
-| **ghostfoxd** | Daemon: profiles, sessions, proxies, encryption, health jobs, **MCP stdio**, REST | Rust |
-| **ghostfox-cli** | Thin client | Rust |
-| **ghostfox-app** | Desktop GUI | Tauri 2 + React/Svelte |
-| **ghostfox-chromium** | Patched browser builds | GN/Ninja CI |
-| **ghostfox-fp** | Fingerprint library | Rust |
-| **ghostfox-harness** | Detector tests | TypeScript Playwright |
-| **ghostfox-integration** | End-to-end tests | Rust |
+| **openantryd** | Daemon: profiles, sessions, proxies, encryption, health jobs, **MCP stdio**, REST | Rust |
+| **openantry-cli** | Thin client | Rust |
+| **OpenAntry-app** | Desktop GUI | Tauri 2 + React/Svelte |
+| **OpenAntry-chromium** | Patched browser builds | GN/Ninja CI |
+| **openantry-fp** | Fingerprint library | Rust |
+| **OpenAntry-harness** | Detector tests | TypeScript Playwright |
+| **OpenAntry-integration** | End-to-end tests | Rust |
 
-**Default MCP entrypoint:** `ghostfoxd mcp` (Rust/`rmcp`). Optional npm wrapper only spawns daemon—**not** a second implementation.
+**Default MCP entrypoint:** `openantryd mcp` (Rust/`rmcp`). Optional npm wrapper only spawns daemon—**not** a second implementation.
 
 ### Monorepo layout
 
@@ -1391,11 +1391,11 @@ Daemon merges capabilities into strict FP enforcement.
 opensource-no-detect-browser-for-agents/
   Cargo.toml
   crates/
-    ghostfoxd/
-    ghostfox-fp/
-    ghostfox-cli/
-    ghostfox-proto/          # types + JSON Schema
-    ghostfox-integration/
+    openantryd/
+    openantry-fp/
+    openantry-cli/
+    openantry-proto/          # types + JSON Schema
+    OpenAntry-integration/
   apps/desktop/
   packages/harness/
   browser/patches/
@@ -1412,28 +1412,28 @@ opensource-no-detect-browser-for-agents/
 
 | OS | Data dir |
 | --- | --- |
-| Linux | `$XDG_DATA_HOME/ghostfox` or `~/.local/share/ghostfox` |
-| macOS | `~/Library/Application Support/GhostFox` |
-| Windows | `%APPDATA%\GhostFox` |
+| Linux | `$XDG_DATA_HOME/OpenAntry` or `~/.local/share/OpenAntry` |
+| macOS | `~/Library/Application Support/OpenAntry` |
+| Windows | `%APPDATA%\OpenAntry` |
 
-Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{data_dir}/api.token`. Pid: `{data_dir}/ghostfoxd.pid`.
+Also: `OPENANTRY_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{data_dir}/api.token`. Pid: `{data_dir}/openantryd.pid`.
 
 ### Versioning & releases
 
 | Artifact | Scheme |
 | --- | --- |
-| ghostfoxd / CLI | Semver `MAJOR.MINOR.PATCH` |
+| openantryd / CLI | Semver `MAJOR.MINOR.PATCH` |
 | API | `api_semver` in status (independent when breaking) |
 | Browser | `browser_build_id` = `gf-chromium-{version}-{os}-{arch}` |
 | Compatibility | Daemon declares `min_browser_major` / `max_browser_major`; browser declares compatible daemon range in `buildinfo.json` |
 
 | Release asset | Notes |
 | --- | --- |
-| **`GhostFox-Setup-{ver}-windows-x64.exe` / `.msi`** | **Primary Windows install** (easy installer — G11) |
-| **`GhostFox-{ver}-macos-{arch}.dmg`** | **Primary macOS install** |
-| **`GhostFox-{ver}-linux-x64.AppImage`** (+ optional `.deb`) | **Primary Linux install** |
-| `ghostfoxd-{ver}-{os}-{arch}.tar.gz` / `.zip` | Portable / CI / advanced users (secondary) |
-| `ghostfox-chromium-{build_id}.zip` | Browser engine (installer can download post-setup) |
+| **`OpenAntry-Setup-{ver}-windows-x64.exe` / `.msi`** | **Primary Windows install** (easy installer — G11) |
+| **`OpenAntry-{ver}-macos-{arch}.dmg`** | **Primary macOS install** |
+| **`OpenAntry-{ver}-linux-x64.AppImage`** (+ optional `.deb`) | **Primary Linux install** |
+| `openantryd-{ver}-{os}-{arch}.tar.gz` / `.zip` | Portable / CI / advanced users (secondary) |
+| `OpenAntry-chromium-{build_id}.zip` | Browser engine (installer can download post-setup) |
 | `SHA256SUMS` + signatures | cosign optional; Authenticode/notarize when available |
 
 > **Requirement:** Portable zip/tarball alone is **not** sufficient for v1 public launch. An **easy installer** must be the default download button on the README/releases page for each supported OS.
@@ -1442,7 +1442,7 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 
 ## Installation & Distribution Requirements
 
-**Product rule:** If a non-developer cannot install GhostFox without reading build docs, the release is incomplete for G11.
+**Product rule:** If a non-developer cannot install OpenAntry without reading build docs, the release is incomplete for G11.
 
 ### Primary UX (must ship for public v1)
 
@@ -1452,7 +1452,7 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 | 2. Run installer | Double-click / open DMG / run AppImage; accept license + responsible-use notice |
 | 3. Choose options | Install location; optional “add to PATH”; optional “start at login”; optional “download browser engine now” vs “use system Chrome” |
 | 4. First-run wizard | Create data dir; generate API token; show **recovery key once** (user must confirm save); detect/install browser |
-| 5. Ready | `ghostfoxd` runnable; tray/status or `ghostfox doctor` green; MCP snippet shown and copyable |
+| 5. Ready | `openantryd` runnable; tray/status or `openantry doctor` green; MCP snippet shown and copyable |
 | 6. Uninstall | Proper uninstaller stops daemon; offers Keep data / Delete data |
 
 ### Platform installers (normative)
@@ -1467,8 +1467,8 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 
 | Component | Included |
 | --- | --- |
-| `ghostfoxd` | Yes |
-| `ghostfox` CLI | Yes |
+| `openantryd` | Yes |
+| `OpenAntry` CLI | Yes |
 | First-run / doctor UI or CLI wizard | Yes |
 | MCP config helper | Yes (writes instructions + optional file paths for Claude/Cursor) |
 | Patched Chromium | Optional download during setup or first `launch_session` (progress UI) |
@@ -1479,7 +1479,7 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 
 | Metric | Target |
 | --- | --- |
-| Time from download to first successful `ghostfox doctor` | **≤ 10 minutes** on a typical broadband machine (excluding multi-GB browser download time) |
+| Time from download to first successful `openantry doctor` | **≤ 10 minutes** on a typical broadband machine (excluding multi-GB browser download time) |
 | Clicks after download (Windows) | **≤ 5** to complete setup (excluding recovery-key confirmation) |
 | Docs required | One “Quick start” page; not monorepo developer docs |
 
@@ -1495,7 +1495,7 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 ### Installer CI / release gate
 
 - Tag release **fails** if Windows installer artifact missing when `windows-x64` is a supported target.
-- Installer smoke test in CI: silent install → `ghostfox doctor --json` exit 0 (browser may be mocked/stock path).
+- Installer smoke test in CI: silent install → `openantry doctor --json` exit 0 (browser may be mocked/stock path).
 - README “Install” section lists installer first; source build last.
 
 ### Storage model & encryption (resolved)
@@ -1510,7 +1510,7 @@ Also: `GHOSTFOX_DATA_DIR` override. Config: `{data_dir}/config.toml`. Token: `{d
 
 1. OS keychain (Windows DPAPI-backed credential / macOS Keychain / libsecret)  
 2. File `{data_dir}/master.key` with user-only ACL + warning  
-3. Env `GHOSTFOX_MASTER_KEY` for CI only  
+3. Env `OPENANTRY_MASTER_KEY` for CI only  
 
 **Recovery:** On first run, print **one-time recovery key** (base32); user must save it. Without recovery key or keychain, data loss is accepted—documented. No cloud recovery.
 
@@ -1583,15 +1583,15 @@ CREATE TABLE audit_events (
 
 ### Experimental JS stealth flag
 
-`GHOSTFOX_EXPERIMENTAL_JS_STEALTH=1` injects a **versioned** init script via CDP `Page.addScriptToEvaluateOnNewDocument` implementing a minimal webdriver hide + chrome object stub. Logged as weak; disabled when patched binary capabilities include M1–M3.
+`OPENANTRY_EXPERIMENTAL_JS_STEALTH=1` injects a **versioned** init script via CDP `Page.addScriptToEvaluateOnNewDocument` implementing a minimal webdriver hide + chrome object stub. Logged as weak; disabled when patched binary capabilities include M1–M3.
 
 ---
 
 ## AdsPower Local API Shim Endpoint Matrix
 
-Default GhostFox compat listener (optional): `http://127.0.0.1:50325` behind flag `GHOSTFOX_ADSPOWER_SHIM=1` (or map on main port under `/api/v1` + `/api/v2`).
+Default OpenAntry compat listener (optional): `http://127.0.0.1:50325` behind flag `OPENANTRY_ADSPOWER_SHIM=1` (or map on main port under `/api/v1` + `/api/v2`).
 
-| AdsPower-style path (subset) | Method | GhostFox handler | Notes |
+| AdsPower-style path (subset) | Method | OpenAntry handler | Notes |
 | --- | --- | --- | --- |
 | `/status` | GET | system ok | liveness |
 | `/api/v1/user/list` | GET | list profiles | field name mapping |
@@ -1601,7 +1601,7 @@ Default GhostFox compat listener (optional): `http://127.0.0.1:50325` behind fla
 | `/api/v2/browser-profile/cookies` | POST/GET | import/export cookies | |
 | `/api/v1/browser/active` | GET | list_sessions | |
 
-**Envelope:** AdsPower-style responses use `{ "code": 0, "msg": "success", "data": { ... } }`. Non-zero `code` on GhostFox typed errors (map e.g. `PROFILE_NOT_FOUND` → non-zero + message).
+**Envelope:** AdsPower-style responses use `{ "code": 0, "msg": "success", "data": { ... } }`. Non-zero `code` on OpenAntry typed errors (map e.g. `PROFILE_NOT_FOUND` → non-zero + message).
 
 #### Example: `GET/POST /api/v1/browser/start` success (mapped from `SessionResult`)
 
@@ -1622,7 +1622,7 @@ Default GhostFox compat listener (optional): `http://127.0.0.1:50325` behind fla
 
 Mapping rules:
 
-| AdsPower `data` field | GhostFox source |
+| AdsPower `data` field | OpenAntry source |
 | --- | --- |
 | `ws.puppeteer` | `SessionResult.cdp_ws_url` |
 | `ws.selenium` / `webdriver` | `127.0.0.1:{debug_port}` |
@@ -1642,7 +1642,7 @@ Failure example:
 
 **Fixtures:** `packages/harness/fixtures/adspower/` must include at least `browser_start_success.json`, `browser_start_already_running.json`, `cookies_post.json` for PR-021 CI. Full field fidelity beyond the subset lives in fixtures, not in this design table.
 
-**Competitor import (PR-022):** map profile name, proxy string, cookie file, UA if present → GhostFox FP generate with overrides; emit warnings for unmapped fields.
+**Competitor import (PR-022):** map profile name, proxy string, cookie file, UA if present → OpenAntry FP generate with overrides; emit warnings for unmapped fields.
 
 ---
 
@@ -1686,7 +1686,7 @@ Chromium primary; Camoufox **experimental secondary** earlier if Phase 0 no-go (
 | --- | --- |
 | Reuse community patches | Matrix testing burden |
 
-**Verdict:** **Accept** via `GHOSTFOX_BROWSER_PATH` + capabilities file.
+**Verdict:** **Accept** via `OPENANTRY_BROWSER_PATH` + capabilities file.
 
 ### 9) ungoogled-chromium / upstream tarball base
 
@@ -1741,7 +1741,7 @@ Single-user local domain; API token always (default); MCP stdio same user. Phase
 | Redaction | Regex for passwords, cookie values; unit tests required |
 | Metrics | Optional Prometheus localhost: `sessions_active`, `launch_latency_ms`, `proxy_check_fail_total`, `fp_health_fail_total` — **no raw profile_id labels** (use hashed id if needed) |
 | Audit | `audit_events` |
-| Doctor | `ghostfox doctor` |
+| Doctor | `openantry doctor` |
 | Status | `GET /v1/system/status` |
 
 ---
@@ -1762,16 +1762,16 @@ Single-user local domain; API token always (default); MCP stdio same user. Phase
 ### Feature flags
 
 ```
-GHOSTFOX_EXPERIMENTAL_JS_STEALTH=0
-GHOSTFOX_MAX_SESSIONS=5
-GHOSTFOX_BIND=127.0.0.1:3847
-GHOSTFOX_ALLOW_LAN=0
-GHOSTFOX_BROWSER_PATH=
-GHOSTFOX_STRICT_FP=1
-GHOSTFOX_INSECURE_NO_TOKEN=0
-GHOSTFOX_ADSPOWER_SHIM=0
-GHOSTFOX_ORPHAN_POLICY=kill
-GHOSTFOX_CDP_PORT_RANGE=9222-9321
+OPENANTRY_EXPERIMENTAL_JS_STEALTH=0
+OPENANTRY_MAX_SESSIONS=5
+OPENANTRY_BIND=127.0.0.1:3847
+OPENANTRY_ALLOW_LAN=0
+OPENANTRY_BROWSER_PATH=
+OPENANTRY_STRICT_FP=1
+OPENANTRY_INSECURE_NO_TOKEN=0
+OPENANTRY_ADSPOWER_SHIM=0
+OPENANTRY_ORPHAN_POLICY=kill
+OPENANTRY_CDP_PORT_RANGE=9222-9321
 ```
 
 Port **3847**: fixed default for discovery simplicity; on conflict daemon tries 3848–3857 then fails with `PORT_CONFLICT` and instructions.
@@ -1798,7 +1798,7 @@ Document in `RESPONSIBLE_USE.md` and README.
 
 | # | Question | Status |
 | --- | --- | --- |
-| Q1 | Product name GhostFox | **Decided** |
+| Q1 | Product name OpenAntry | **Decided** |
 | Q2 | MCP Rust-only vs dual | **Decided** — Rust in daemon; npm spawns only |
 | Q3 | Encryption scope | **Decided** — P0 field/blob; P1 full archive |
 | Q4 | Chromium lag | **Decided** — ≤2 major |
@@ -1814,16 +1814,16 @@ Document in `RESPONSIBLE_USE.md` and README.
 
 | Decision | Choice | Rationale |
 | --- | --- | --- |
-| Product name | GhostFox | Brandable stealth name; not a clone trademark |
+| Product name | OpenAntry | Brandable stealth name; not a clone trademark |
 | Agent-first priority | MCP > REST > CDP > CLI > GUI | Differentiation vs GUI-first commercial tools |
 | Local-first secrets | Encrypt FP/proxy/cookies P0; full dir P1 | Launch latency; security for highest-value secrets |
 | Crypto primitive | **libsodium secretstream** | Streaming, one stack, Rust-friendly |
 | Key storage | OS keychain first; file ACL fallback; recovery key at init | Real-world UX + explicit loss model |
-| Core language | Rust `ghostfoxd` | Process control, crypto, single binary |
-| MCP implementation | **`ghostfoxd mcp` (rmcp)** | One implementation; npm optional wrapper |
+| Core language | Rust `openantryd` | Process control, crypto, single binary |
+| MCP implementation | **`openantryd mcp` (rmcp)** | One implementation; npm optional wrapper |
 | GUI toolkit | Tauri 2 Phase 3 | Thin client; small footprint |
 | Browser strategy | Own open patches; stock/path Phase 1; no CloakBrowser vendor | OSS purity + realistic MVP |
-| External engines | Capability-negotiated `GHOSTFOX_BROWSER_PATH` | Risk hedge / community builds |
+| External engines | Capability-negotiated `OPENANTRY_BROWSER_PATH` | Risk hedge / community builds |
 | Experimental Camoufox | Allow earlier if Phase 0 slips | Hedge reduction without abandoning Chromium-primary |
 | Fingerprint approach | Constraint engine + deterministic seeded noise | Prevent impossible combos; stable hashes |
 | Session exclusivity | **One session per profile**; force flag | Avoid user-data-dir corruption |
@@ -1895,13 +1895,13 @@ Each PR independently reviewable; green CI.
 ### PR-002 — Shared types & errors **(M)**
 
 - **Title:** `feat(proto): types, fingerprint.schema.json v1, error codes`
-- **Files:** `crates/ghostfox-proto/`  
+- **Files:** `crates/openantry-proto/`  
 - **Dependencies:** PR-001  
 
 ### PR-003 — Fingerprint engine **(L)**
 
 - **Title:** `feat(fp): generator, hard/soft rules, catalogs, deterministic noise`
-- **Files:** `crates/ghostfox-fp/`, `data/*.json`  
+- **Files:** `crates/openantry-fp/`, `data/*.json`  
 - **Dependencies:** PR-002  
 
 ### PR-004 — SQLite + P0 encryption **(M)**
@@ -1941,7 +1941,7 @@ Each PR independently reviewable; green CI.
 
 ### PR-00T — OpenAPI CI diff + integration crate **(S)**
 
-- **Title:** `test: openapi freeze check + ghostfox-integration smoke`
+- **Title:** `test: openapi freeze check + OpenAntry-integration smoke`
 - **Dependencies:** PR-008  
 
 ### PR-009 — CLI **(S)**
@@ -1950,7 +1950,7 @@ Each PR independently reviewable; green CI.
 
 ### PR-010 — MCP lifecycle tools **(M)**
 
-- **Title:** `feat(mcp): ghostfoxd mcp stdio tools + annotations`
+- **Title:** `feat(mcp): openantryd mcp stdio tools + annotations`
 - **Dependencies:** PR-008  
 
 ### PR-00D — Agent docs & examples **(S)**
@@ -1997,7 +1997,7 @@ Each PR independently reviewable; green CI.
 
 - **Dependencies:** PR-013 or PR-007 (load-extension flag)  
 
-### PR-016 — Bulk ops & `.ghostfox` package **(M)**
+### PR-016 — Bulk ops & `.OpenAntry` package **(M)**
 
 - **Dependencies:** PR-011, PR-005  
 
@@ -2016,7 +2016,7 @@ Each PR independently reviewable; green CI.
   - First-run wizard: recovery key, token, browser path or download prompt
   - PATH registration; Start Menu entry; uninstaller (keep/delete data)
   - MCP config helper (print + optional write paths for Claude Desktop / Cursor)
-  - Silent install smoke in CI: install → `ghostfox doctor --json`
+  - Silent install smoke in CI: install → `openantry doctor --json`
   - README Install section: installer first, source last
 - **Follow-ups (same epic, may split PRs):**
   - **PR-00P-mac** — DMG + notarization runbook **(L)**
@@ -2167,7 +2167,7 @@ Chromium path is **XL** and must not block MCP MVP; **installer must not wait on
 
 | Name | Verdict |
 | --- | --- |
-| **GhostFox** | **Chosen** |
+| **OpenAntry** | **Chosen** |
 | ProfileForge / AgentBrowser / ShadowProfile / OpenAnty | Rejected (generic / abuse-y / trademark) |
 
 ---

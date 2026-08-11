@@ -1,29 +1,29 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/ghostfox-proto",
-    "crates/ghostfox-fp",
-    "crates/ghostfox-core",
-    "crates/ghostfoxd",
-    "crates/ghostfox-cli",
+    "crates/openantry-proto",
+    "crates/openantry-fp",
+    "crates/openantry-core",
+    "crates/openantryd",
+    "crates/openantry-cli",
 ]
 default-members = [
-    "crates/ghostfoxd",
-    "crates/ghostfox-cli",
+    "crates/openantryd",
+    "crates/openantry-cli",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/ghostfox/ghostfox"
-authors = ["GhostFox Contributors"]
+repository = "https://github.com/openantry/openantry"
+authors = ["Open Antry Contributors"]
 rust-version = "1.75"
 
 [workspace.dependencies]
-ghostfox-proto = { path = "crates/ghostfox-proto", version = "0.1.0" }
-ghostfox-fp = { path = "crates/ghostfox-fp", version = "0.1.0" }
-ghostfox-core = { path = "crates/ghostfox-core", version = "0.1.0" }
+openantry-proto = { path = "crates/openantry-proto", version = "0.1.0" }
+openantry-fp = { path = "crates/openantry-fp", version = "0.1.0" }
+openantry-core = { path = "crates/openantry-core", version = "0.1.0" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

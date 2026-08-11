@@ -1,7 +1,7 @@
 /**
- * Connect to a GhostFox session via CDP.
+ * Connect to a OpenAntry session via CDP.
  * Usage:
- *   ghostfox session launch prf_... --headless
+ *   OpenAntry session launch prf_... --headless
  *   set CDP_URL=ws://127.0.0.1:...
  *   node examples/playwright_connect.js
  */

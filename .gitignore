@@ -31,6 +31,7 @@ packaging/windows/obj/
 /tmp/
 /test-output/
 .ghostfox-data*/
+.openantry-data*/
 .chrome-test-ud/
 e2e-*.txt
 e2e-*.json

@@ -1,9 +1,9 @@
-# GhostFox MCP Server
+# OpenAntry MCP Server
 
 ## Run
 
 ```bash
-ghostfoxd mcp
+openantryd mcp
 ```
 
 MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC (MCP 2024-11-05).
@@ -13,8 +13,8 @@ MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC
 ```json
 {
   "mcpServers": {
-    "ghostfox": {
-      "command": "C:\\path\\to\\ghostfoxd.exe",
+    "openantry": {
+      "command": "C:\\path\\to\\openantryd.exe",
       "args": ["mcp"]
     }
   }
@@ -24,7 +24,7 @@ MCP hosts spawn this process over **stdio** using Content-Length framed JSON-RPC
 Generate a snippet with:
 
 ```bash
-ghostfox mcp-config
+openantry mcp-config
 ```
 
 ## Tool contract
