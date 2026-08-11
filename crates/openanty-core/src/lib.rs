@@ -4,6 +4,7 @@ pub mod browser;
 pub mod cdp_page;
 pub mod config;
 pub mod crypto;
+pub mod features;
 pub mod paths;
 pub mod proxy;
 pub mod service;

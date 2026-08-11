@@ -1,5 +1,6 @@
 mod api;
 mod mcp;
+mod ui_static;
 
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
@@ -79,7 +80,8 @@ async fn serve(service: Arc<OpenAntyService>) -> Result<()> {
 
     let app = api::router(service.clone());
     let addr: SocketAddr = bind.parse().context("invalid bind address")?;
-    tracing::info!("Open Anty API listening on http://{addr}");
+    tracing::info!("Open Anty API + UI listening on http://{addr}");
+    tracing::info!("Control panel: http://{addr}/");
     tracing::info!("data_dir={}", service.data_dir.display());
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;

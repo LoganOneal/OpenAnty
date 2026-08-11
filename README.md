@@ -21,6 +21,21 @@
 - `openanty doctor` environment checks
 - Easy installer packaging (Windows script + Inno Setup stubs)
 
+## Open the UI (Dolphin-style control panel)
+
+```bash
+# Terminal 1 — start API + embedded UI
+openantyd serve
+
+# Terminal 2 — open browser to the panel
+openanty ui
+# → http://127.0.0.1:3847/
+```
+
+The control panel mirrors **Dolphin{anty}-style** layout: dark theme, left sidebar (Browser Profiles, Proxies, Extensions, Automation, Synchronizer, Cookie Robot, Team, Settings), profile table with bulk actions, and a Create Profile modal (general / proxy / fingerprint / cookies).
+
+> Branding is **Open Anty** (not Dolphin). Layout and workflows are intentionally similar for operator familiarity.
+
 ## For agents (Claude / Cursor / Grok) — easiest path
 
 **Goal:** User says *“scrape every page on domain.com using Open Anty”* and the agent can install, configure, and control the browser without Playwright.

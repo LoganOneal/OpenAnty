@@ -123,7 +123,19 @@ impl Store {
             conn.execute("INSERT INTO schema_migrations(version) VALUES (1)", [])
                 .map_err(|e| e.to_string())?;
         }
+        // Phase B/C/D feature tables
+        crate::features::ensure_feature_tables(&conn)?;
+        if version < 2 {
+            conn.execute("INSERT INTO schema_migrations(version) VALUES (2)", [])
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
+    }
+
+    /// Raw connection access for feature tables (short lock).
+    pub fn with_conn<T>(&self, f: impl FnOnce(&Connection) -> Result<T, String>) -> Result<T, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        f(&conn)
     }
 
     pub fn data_dir(&self) -> &Path {

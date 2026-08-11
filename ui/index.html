@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Open Anty — Browser Profiles</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236d5efc'/><text x='16' y='22' text-anchor='middle' fill='white' font-size='16' font-family='sans-serif'>A</text></svg>" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">OA</div>
+        <div class="brand-text">
+          <strong>Open Anty</strong>
+          <span>local antidetect</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="profiles">
+          <span class="ico">◫</span> Browser Profiles
+        </button>
+        <button class="nav-item" data-view="proxies">
+          <span class="ico">◎</span> Proxies
+        </button>
+        <button class="nav-item" data-view="extensions">
+          <span class="ico">▦</span> Extensions
+        </button>
+        <button class="nav-item" data-view="scenarios">
+          <span class="ico">⚡</span> Automation
+        </button>
+        <button class="nav-item" data-view="sync">
+          <span class="ico">⇄</span> Synchronizer
+        </button>
+        <button class="nav-item" data-view="cookies">
+          <span class="ico">🍪</span> Cookie Robot
+        </button>
+        <button class="nav-item" data-view="team">
+          <span class="ico">👥</span> Team
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="ico">⚙</span> Settings
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="doctor-pill" class="pill muted">checking…</div>
+        <div class="version" id="app-version">v—</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 id="view-title">Browser Profiles</h1>
+          <p class="sub" id="view-sub">Manage isolated fingerprints, proxies, and sessions</p>
+        </div>
+        <div class="topbar-right">
+          <div class="search-wrap">
+            <input id="search" type="search" placeholder="Search profiles, tags, notes…" />
+          </div>
+          <button class="btn ghost" id="btn-refresh">Refresh</button>
+          <button class="btn primary" id="btn-create">+ Create profile</button>
+        </div>
+      </header>
+
+      <section id="view-profiles" class="view active">
+        <div class="toolbar">
+          <div class="filters">
+            <select id="filter-status">
+              <option value="">All statuses</option>
+              <option value="running">Running</option>
+              <option value="idle">Idle</option>
+            </select>
+            <select id="filter-tag">
+              <option value="">All tags</option>
+            </select>
+          </div>
+          <div class="bulk" id="bulk-bar" hidden>
+            <span id="bulk-count">0 selected</span>
+            <button class="btn sm" data-bulk="start">Start</button>
+            <button class="btn sm" data-bulk="stop">Stop</button>
+            <button class="btn sm" data-bulk="delete">Delete</button>
+            <button class="btn sm" data-bulk="export-cookies">Export cookies</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <table class="data-table" id="profiles-table">
+            <thead>
+              <tr>
+                <th class="col-check"><input type="checkbox" id="check-all" /></th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Tags</th>
+                <th>Proxy</th>
+                <th>OS / Browser</th>
+                <th>Fingerprint</th>
+                <th>Created</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="profiles-body">
+              <tr><td colspan="9" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-proxies" class="view">
+        <div class="panel">
+          <h2>Proxy pool</h2>
+          <p class="muted">BYO proxies — store a library and attach to profiles (like Dolphin proxy column).</p>
+          <div class="form-row">
+            <input id="proxy-name" placeholder="Label (e.g. US residential)" />
+            <input id="proxy-server" placeholder="http://user:pass@host:port or host:port" class="grow" />
+            <button class="btn primary" id="btn-add-proxy">Add proxy</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Server</th><th>Status</th><th></th></tr></thead>
+            <tbody id="proxies-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-extensions" class="view">
+        <div class="panel">
+          <h2>Extensions</h2>
+          <p class="muted">Register unpacked CRX paths to load into profiles on launch (Phase B).</p>
+          <div class="form-row">
+            <input id="ext-name" placeholder="Extension name" />
+            <input id="ext-path" placeholder="Absolute path to unpacked extension" class="grow" />
+            <button class="btn primary" id="btn-add-ext">Add extension</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Path</th><th>Enabled</th><th></th></tr></thead>
+            <tbody id="ext-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-scenarios" class="view">
+        <div class="panel">
+          <h2>Automation scenarios</h2>
+          <p class="muted">JSON step runner: navigate, wait, click, type, evaluate (Phase C).</p>
+          <div class="form-row">
+            <input id="scen-name" placeholder="Scenario name" />
+            <button class="btn primary" id="btn-save-scen">Save scenario</button>
+          </div>
+          <textarea id="scen-json" rows="12" spellcheck="false">{
+  "name": "example-warm",
+  "steps": [
+    { "action": "navigate", "url": "https://example.com" },
+    { "action": "wait", "ms": 1500 },
+    { "action": "evaluate", "expression": "document.title" }
+  ]
+}</textarea>
+          <div class="form-row">
+            <select id="scen-profile"></select>
+            <button class="btn" id="btn-run-scen">Run on profile</button>
+          </div>
+          <pre id="scen-log" class="log"></pre>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Steps</th><th></th></tr></thead>
+            <tbody id="scen-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-sync" class="view">
+        <div class="panel">
+          <h2>Synchronizer</h2>
+          <p class="muted">Mirror navigate actions from a master session to followers (MVP).</p>
+          <div class="form-row">
+            <label>Master session</label>
+            <select id="sync-master" class="grow"></select>
+          </div>
+          <div class="form-row">
+            <label>Followers</label>
+            <select id="sync-followers" class="grow" multiple size="5"></select>
+          </div>
+          <div class="form-row">
+            <input id="sync-url" placeholder="URL to open on all" class="grow" value="https://example.com" />
+            <button class="btn primary" id="btn-sync-nav">Sync navigate</button>
+          </div>
+          <pre id="sync-log" class="log"></pre>
+        </div>
+      </section>
+
+      <section id="view-cookies" class="view">
+        <div class="panel">
+          <h2>Cookie robot</h2>
+          <p class="muted">Warm profiles by visiting a list of URLs, then export cookies.</p>
+          <div class="form-row">
+            <select id="robot-profile" class="grow"></select>
+          </div>
+          <textarea id="robot-urls" rows="6" placeholder="One URL per line"></textarea>
+          <div class="form-row">
+            <button class="btn primary" id="btn-robot-run">Run warm-up</button>
+          </div>
+          <pre id="robot-log" class="log"></pre>
+        </div>
+      </section>
+
+      <section id="view-team" class="view">
+        <div class="panel">
+          <h2>Team (local RBAC)</h2>
+          <p class="muted">Local multi-user roles stored on this machine (Phase D). Cloud sync not included.</p>
+          <div class="form-row">
+            <input id="user-name" placeholder="Username" />
+            <select id="user-role">
+              <option value="admin">admin</option>
+              <option value="operator">operator</option>
+              <option value="viewer">viewer</option>
+            </select>
+            <button class="btn primary" id="btn-add-user">Add user</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>User</th><th>Role</th><th>Created</th><th></th></tr></thead>
+            <tbody id="team-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="panel">
+          <h2>Settings & doctor</h2>
+          <div id="settings-doctor" class="log"></div>
+          <div class="form-row mt">
+            <button class="btn" id="btn-fp-health">Run fingerprint health (sample)</button>
+            <button class="btn" id="btn-bulk-create">Bulk create 5 profiles</button>
+          </div>
+          <pre id="settings-log" class="log"></pre>
+          <h3 class="mt">API / MCP</h3>
+          <p class="muted">Token is injected for this local UI session. Do not share.</p>
+          <code id="api-token" class="token"></code>
+          <h3 class="mt">AdsPower-compatible shim</h3>
+          <p class="muted">Subset under <code>/browser/list</code> and <code>/browser/start</code> for migration scripts.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Create / edit modal -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal">
+      <header class="modal-head">
+        <h2>New browser profile</h2>
+        <button class="icon-btn" id="modal-close">×</button>
+      </header>
+      <div class="modal-tabs">
+        <button class="tab active" data-tab="general">General</button>
+        <button class="tab" data-tab="proxy">Proxy</button>
+        <button class="tab" data-tab="fingerprint">Fingerprint</button>
+        <button class="tab" data-tab="cookies">Cookies</button>
+      </div>
+      <div class="modal-body">
+        <div class="tab-pane active" data-pane="general">
+          <label>Profile name</label>
+          <input id="m-name" placeholder="e.g. FB — farm 01" />
+          <label>Tags (comma-separated)</label>
+          <input id="m-tags" placeholder="fb, farm, us" />
+          <label>Notes</label>
+          <textarea id="m-notes" rows="3"></textarea>
+          <label>OS preference</label>
+          <select id="m-os">
+            <option value="">Auto</option>
+            <option value="windows">Windows</option>
+            <option value="macos">macOS</option>
+            <option value="linux">Linux</option>
+          </select>
+        </div>
+        <div class="tab-pane" data-pane="proxy">
+          <label>Proxy URL</label>
+          <input id="m-proxy" placeholder="http://user:pass@host:port" />
+          <p class="muted sm">Leave empty for direct connection. Checked on apply.</p>
+        </div>
+        <div class="tab-pane" data-pane="fingerprint">
+          <label>Template</label>
+          <select id="m-template">
+            <option value="">Default (Win11 Chrome mid)</option>
+            <option value="win11_chrome_mid">win11_chrome_mid</option>
+            <option value="win10_chrome_mid">win10_chrome_mid</option>
+            <option value="macos_chrome_mid">macos_chrome_mid</option>
+          </select>
+          <p class="muted sm">Coherent fingerprint document is generated on create. Engine-level stealth is Phase B (patched Chromium).</p>
+        </div>
+        <div class="tab-pane" data-pane="cookies">
+          <label>Cookies JSON array</label>
+          <textarea id="m-cookies" rows="8" placeholder='[{"name":"sid","value":"…","domain":".example.com","path":"/"}]'></textarea>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn ghost" id="modal-cancel">Cancel</button>
+        <button class="btn primary" id="modal-save">Create profile</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script>
+    window.__OPENANTY__ = {
+      token: "{{TOKEN}}",
+      apiBase: "",
+      version: "{{VERSION}}"
+    };
+  </script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

@@ -99,25 +99,26 @@ Claude → stop_session / export_cookies
 - [x] Skill doc: scrape-domain agent recipe  
 - [x] README: “For Claude / agents” section with copy-paste MCP JSON using npx  
 
-### Phase B — Stealth depth (next)
+### Phase B — Stealth depth
 
-- Patched Chromium distribution (Phase 0 gate from DESIGN.md)  
-- Extension load per profile  
-- Fingerprint health public suites  
-- Bulk profile create  
+- [~] Patched Chromium distribution — **not shipped**; stock Chrome + health harness  
+- [x] Extension registry + `--load-extension` on launch  
+- [x] Fingerprint health sample suite (`/v1/fingerprint/health`)  
+- [x] Bulk profile create (`/v1/profiles/bulk`)  
 
 ### Phase C — Operator parity
 
-- Cookie robot / warm-up  
-- Scenario runner (JSON steps, not full visual RPA)  
-- Synchronizer MVP  
-- AdsPower local API shim subset  
-- Tauri GUI  
+- [x] Cookie robot / warm-up (`/v1/cookie-robot/run`)  
+- [x] Scenario runner JSON steps (`/v1/scenarios`, `/v1/scenarios/run`)  
+- [x] Synchronizer MVP navigate (`/v1/synchronizer/navigate`)  
+- [x] AdsPower local API shim subset (`/browser/list|start|stop`)  
+- [x] **Operator GUI** — Dolphin-inspired web control panel at `http://127.0.0.1:3847/` (embedded in `openantyd serve`; `openanty ui`)  
+- [ ] Native Tauri shell (optional; web UI is primary)  
 
 ### Phase D — Teams (optional)
 
-- Local multi-user RBAC  
-- Optional encrypted sync  
+- [x] Local multi-user RBAC store (`/v1/users`, roles admin/operator/viewer)  
+- [ ] Optional encrypted multi-device sync (deferred)  
 
 ---
 

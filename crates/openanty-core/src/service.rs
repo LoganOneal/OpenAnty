@@ -431,6 +431,22 @@ impl OpenAntyService {
             args.push("--headless=new".into());
             args.push("--disable-gpu".into());
         }
+        // Phase B: load enabled unpacked extensions
+        if let Ok(exts) = self.list_extensions() {
+            let paths: Vec<String> = exts
+                .into_iter()
+                .filter(|e| e.enabled)
+                .map(|e| e.path)
+                .filter(|p| std::path::Path::new(p).exists())
+                .collect();
+            if !paths.is_empty() {
+                args.push(format!("--load-extension={}", paths.join(",")));
+                args.push(format!(
+                    "--disable-extensions-except={}",
+                    paths.join(",")
+                ));
+            }
+        }
         if let Some(proxy) = &profile.proxy {
             args.push(format!(
                 "--proxy-server={}",
@@ -791,6 +807,342 @@ impl OpenAntyService {
             "version": DAEMON_VERSION,
             "checks": checks,
         })
+    }
+
+    // —— Phase B/C/D feature APIs ——
+
+    pub fn bulk_create_profiles(
+        &self,
+        count: u32,
+        name_prefix: &str,
+        tags: Option<Vec<String>>,
+    ) -> Result<Vec<Profile>, OpenAntyError> {
+        let count = count.clamp(1, 50);
+        let mut out = Vec::new();
+        for i in 1..=count {
+            let p = self.create_profile(CreateProfileRequest {
+                name: format!("{name_prefix}-{i:02}"),
+                template: None,
+                os: None,
+                proxy: None,
+                fingerprint_overrides: None,
+                tags: tags.clone(),
+                notes: Some("bulk created".into()),
+            })?;
+            out.push(p);
+        }
+        Ok(out)
+    }
+
+    pub fn list_proxy_pool(&self) -> Result<Vec<crate::features::ProxyPoolItem>, OpenAntyError> {
+        self.store
+            .with_conn(crate::features::list_proxy_pool)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn add_proxy_pool(
+        &self,
+        name: &str,
+        server: &str,
+        username: Option<&str>,
+        password: Option<&str>,
+    ) -> Result<crate::features::ProxyPoolItem, OpenAntyError> {
+        self.store
+            .with_conn(|c| crate::features::add_proxy_pool(c, name, server, username, password))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn delete_proxy_pool(&self, id: &str) -> Result<(), OpenAntyError> {
+        let ok = self
+            .store
+            .with_conn(|c| crate::features::delete_proxy_pool(c, id))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        if !ok {
+            return Err(OpenAntyError::app(ErrorCode::InvalidRequest, "proxy not found"));
+        }
+        Ok(())
+    }
+
+    pub fn list_extensions(&self) -> Result<Vec<crate::features::ExtensionItem>, OpenAntyError> {
+        self.store
+            .with_conn(crate::features::list_extensions)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn add_extension(
+        &self,
+        name: &str,
+        path: &str,
+        enabled: bool,
+    ) -> Result<crate::features::ExtensionItem, OpenAntyError> {
+        self.store
+            .with_conn(|c| crate::features::add_extension(c, name, path, enabled))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn delete_extension(&self, id: &str) -> Result<(), OpenAntyError> {
+        let ok = self
+            .store
+            .with_conn(|c| crate::features::delete_extension(c, id))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        if !ok {
+            return Err(OpenAntyError::app(ErrorCode::InvalidRequest, "extension not found"));
+        }
+        Ok(())
+    }
+
+    pub fn list_scenarios(&self) -> Result<Vec<crate::features::ScenarioItem>, OpenAntyError> {
+        self.store
+            .with_conn(crate::features::list_scenarios)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn save_scenario(
+        &self,
+        name: &str,
+        steps: Vec<serde_json::Value>,
+    ) -> Result<crate::features::ScenarioItem, OpenAntyError> {
+        self.store
+            .with_conn(|c| crate::features::save_scenario(c, name, &steps))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn delete_scenario(&self, id: &str) -> Result<(), OpenAntyError> {
+        let ok = self
+            .store
+            .with_conn(|c| crate::features::delete_scenario(c, id))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        if !ok {
+            return Err(OpenAntyError::app(ErrorCode::InvalidRequest, "scenario not found"));
+        }
+        Ok(())
+    }
+
+    pub fn list_users(&self) -> Result<Vec<crate::features::UserItem>, OpenAntyError> {
+        self.store
+            .with_conn(crate::features::list_users)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn add_user(&self, username: &str, role: &str) -> Result<crate::features::UserItem, OpenAntyError> {
+        let role = match role {
+            "admin" | "operator" | "viewer" => role,
+            _ => "viewer",
+        };
+        self.store
+            .with_conn(|c| crate::features::add_user(c, username, role))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))
+    }
+
+    pub fn delete_user(&self, id: &str) -> Result<(), OpenAntyError> {
+        let ok = self
+            .store
+            .with_conn(|c| crate::features::delete_user(c, id))
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        if !ok {
+            return Err(OpenAntyError::app(ErrorCode::InvalidRequest, "user not found"));
+        }
+        Ok(())
+    }
+
+    /// Offline fingerprint consistency health (Phase B harness baseline).
+    pub fn fingerprint_health_sample(&self) -> serde_json::Value {
+        let browser = self.browser_info().unwrap_or(BrowserInfo {
+            path: PathBuf::from("chrome"),
+            major: 130,
+        });
+        let mut reports = vec![];
+        for template in [
+            FingerprintTemplate::Win11ChromeMid,
+            FingerprintTemplate::Win11ChromeHigh,
+            FingerprintTemplate::MacosChromeMSeries,
+        ] {
+            match generate_with_overrides(template, None, browser.major, None, None, None) {
+                Ok((doc, report)) => {
+                    reports.push(serde_json::json!({
+                        "template": format!("{:?}", template),
+                        "fingerprint_hash": fingerprint_hash(&doc),
+                        "valid": report.ok,
+                        "warnings": report.warnings,
+                        "errors": report.errors,
+                    }));
+                }
+                Err(e) => reports.push(serde_json::json!({
+                    "template": format!("{:?}", template),
+                    "error": e
+                })),
+            }
+        }
+        let all_valid = reports.iter().all(|r| r.get("valid") == Some(&serde_json::json!(true)));
+        serde_json::json!({
+            "ok": all_valid,
+            "engine": "stock_chrome",
+            "patched_chromium": false,
+            "note": "Phase 0/B: full detector suites require patched Chromium distribution",
+            "samples": reports,
+        })
+    }
+
+    pub async fn run_scenario(
+        &self,
+        profile_id: &str,
+        steps: Vec<serde_json::Value>,
+        headed: bool,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let session = self
+            .launch_session(LaunchSessionRequest {
+                profile_id: profile_id.into(),
+                headed,
+                start_url: Some("about:blank".into()),
+                ttl_seconds: 3600,
+                force: false,
+                locale_from_proxy: true,
+            })
+            .await?;
+        let cdp = session
+            .cdp_ws_url
+            .clone()
+            .ok_or_else(|| OpenAntyError::app(ErrorCode::Internal, "no cdp url"))?;
+        let mut results = Vec::new();
+        for (i, step) in steps.iter().enumerate() {
+            let action = step.get("action").and_then(|a| a.as_str()).unwrap_or("");
+            let step_result = match action {
+                "navigate" => {
+                    let url = step.get("url").and_then(|u| u.as_str()).unwrap_or("about:blank");
+                    match crate::cdp_page::page_navigate(&cdp, url).await {
+                        Ok(p) => serde_json::json!({"step": i, "action": action, "ok": true, "url": p.url, "title": p.title}),
+                        Err(e) => serde_json::json!({"step": i, "action": action, "ok": false, "error": e}),
+                    }
+                }
+                "wait" => {
+                    let ms = step.get("ms").and_then(|m| m.as_u64()).unwrap_or(1000);
+                    tokio::time::sleep(StdDuration::from_millis(ms)).await;
+                    serde_json::json!({"step": i, "action": action, "ok": true, "ms": ms})
+                }
+                "click" => {
+                    let sel = step.get("selector").and_then(|s| s.as_str()).unwrap_or("");
+                    match crate::cdp_page::page_click(&cdp, sel).await {
+                        Ok(()) => serde_json::json!({"step": i, "action": action, "ok": true}),
+                        Err(e) => serde_json::json!({"step": i, "action": action, "ok": false, "error": e}),
+                    }
+                }
+                "type" => {
+                    let sel = step.get("selector").and_then(|s| s.as_str()).unwrap_or("");
+                    let text = step.get("text").and_then(|s| s.as_str()).unwrap_or("");
+                    match crate::cdp_page::page_type(&cdp, sel, text).await {
+                        Ok(()) => serde_json::json!({"step": i, "action": action, "ok": true}),
+                        Err(e) => serde_json::json!({"step": i, "action": action, "ok": false, "error": e}),
+                    }
+                }
+                "evaluate" => {
+                    let expr = step.get("expression").and_then(|s| s.as_str()).unwrap_or("null");
+                    match crate::cdp_page::page_evaluate(&cdp, expr).await {
+                        Ok(v) => serde_json::json!({"step": i, "action": action, "ok": true, "value": v}),
+                        Err(e) => serde_json::json!({"step": i, "action": action, "ok": false, "error": e}),
+                    }
+                }
+                "content" => {
+                    let mode = step.get("mode").and_then(|s| s.as_str()).unwrap_or("text");
+                    match crate::cdp_page::page_content(&cdp, mode).await {
+                        Ok(p) => serde_json::json!({"step": i, "action": action, "ok": true, "title": p.title, "len": p.content.len()}),
+                        Err(e) => serde_json::json!({"step": i, "action": action, "ok": false, "error": e}),
+                    }
+                }
+                other => serde_json::json!({"step": i, "action": other, "ok": false, "error": "unknown action"}),
+            };
+            results.push(step_result);
+        }
+        Ok(serde_json::json!({
+            "ok": true,
+            "session_id": session.id,
+            "cdp_ws_url": session.cdp_ws_url,
+            "results": results,
+        }))
+    }
+
+    pub async fn cookie_robot(
+        &self,
+        profile_id: &str,
+        urls: Vec<String>,
+        headed: bool,
+        export_after: bool,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let session = self
+            .launch_session(LaunchSessionRequest {
+                profile_id: profile_id.into(),
+                headed,
+                start_url: urls.first().cloned().or_else(|| Some("about:blank".into())),
+                ttl_seconds: 3600,
+                force: false,
+                locale_from_proxy: true,
+            })
+            .await?;
+        let cdp = session
+            .cdp_ws_url
+            .clone()
+            .ok_or_else(|| OpenAntyError::app(ErrorCode::Internal, "no cdp"))?;
+        let mut visited = Vec::new();
+        for url in &urls {
+            match crate::cdp_page::page_navigate(&cdp, url).await {
+                Ok(p) => visited.push(serde_json::json!({"url": p.url, "title": p.title, "ok": true})),
+                Err(e) => visited.push(serde_json::json!({"url": url, "ok": false, "error": e})),
+            }
+            tokio::time::sleep(StdDuration::from_millis(800)).await;
+        }
+        // Harvest cookies from live browser when possible
+        if let Some(ws) = &session.cdp_ws_url {
+            if let Ok(cookies) = harvest_cookies_cdp(ws).await {
+                let _ = self.import_cookies(profile_id, cookies, true);
+            }
+        }
+        let exported = if export_after {
+            Some(self.export_cookies(profile_id)?)
+        } else {
+            None
+        };
+        let _ = self.stop_session(&session.id).await;
+        Ok(serde_json::json!({
+            "ok": true,
+            "profile_id": profile_id,
+            "visited": visited,
+            "cookies": exported,
+            "cookie_count": exported.as_ref().map(|c| c.len()).unwrap_or(0),
+        }))
+    }
+
+    pub async fn synchronizer_navigate(
+        &self,
+        master_session_id: &str,
+        follower_session_ids: Vec<String>,
+        url: &str,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let mut results = Vec::new();
+        let mut all_ids = vec![master_session_id.to_string()];
+        all_ids.extend(follower_session_ids);
+        for sid in all_ids {
+            match self.get_session(&sid) {
+                Ok(ses) => {
+                    if let Some(cdp) = ses.cdp_ws_url {
+                        match crate::cdp_page::page_navigate(&cdp, url).await {
+                            Ok(p) => results.push(serde_json::json!({
+                                "session_id": sid, "ok": true, "url": p.url, "title": p.title
+                            })),
+                            Err(e) => results.push(serde_json::json!({
+                                "session_id": sid, "ok": false, "error": e
+                            })),
+                        }
+                    } else {
+                        results.push(serde_json::json!({
+                            "session_id": sid, "ok": false, "error": "no cdp"
+                        }));
+                    }
+                }
+                Err(e) => results.push(serde_json::json!({
+                    "session_id": sid, "ok": false, "error": e.to_string()
+                })),
+            }
+        }
+        Ok(serde_json::json!({ "ok": true, "url": url, "results": results }))
     }
 }
 

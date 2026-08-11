@@ -47,6 +47,15 @@ enum Commands {
     },
     /// Show system status (local service)
     Status,
+    /// Open the Dolphin-style control panel in your browser (starts API if needed)
+    Ui {
+        /// Do not auto-open the system browser
+        #[arg(long)]
+        no_open: bool,
+        /// Bind address for the UI server (default from config / 127.0.0.1:3847)
+        #[arg(long)]
+        bind: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -183,6 +192,37 @@ async fn main() -> Result<()> {
         Commands::Status => {
             let svc = open_svc(data_dir)?;
             println!("{}", serde_json::to_string_pretty(&svc.system_status())?);
+        }
+        Commands::Ui { no_open, bind } => {
+            let svc = open_svc(data_dir.clone())?;
+            let url = bind
+                .as_ref()
+                .map(|b| format!("http://{b}/"))
+                .unwrap_or_else(|| format!("{}/", svc.config.api_base()));
+            println!("Open Anty control panel (Dolphin-style)");
+            println!("  URL:      {url}");
+            println!("  data_dir: {}", svc.data_dir.display());
+            println!();
+            println!("Start the API server if it is not running:");
+            println!("  openantyd serve");
+            println!();
+            if !no_open {
+                #[cfg(target_os = "windows")]
+                {
+                    let _ = std::process::Command::new("cmd")
+                        .args(["/C", "start", "", &url])
+                        .spawn();
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    let _ = std::process::Command::new("open").arg(&url).spawn();
+                }
+                #[cfg(all(unix, not(target_os = "macos")))]
+                {
+                    let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                }
+                println!("Opened browser. If the page fails to load, run: openantyd serve");
+            }
         }
         Commands::Profile { cmd } => match cmd {
             ProfileCmd::Create { name, template, os } => {
