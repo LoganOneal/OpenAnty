@@ -6,6 +6,7 @@
 
 - **BYO Gmail / IMAP OTP:** `mail_connect`, `mail_wait_otp`, `mail_list`, `mail_status`, `mail_handoff` (MCP + REST `/v1/mail/*` + CLI `openanty mail`). Gmail App Passwords; encrypted local credentials. See [docs/skills/gmail-otp.md](docs/skills/gmail-otp.md)
 - **DuckDuckGo private `@duck.com` aliases (experimental):** unofficial `quack.duckduckgo.com` API via Bearer token — `mail_duck_connect`, `mail_create_alias` (`duckduckgo` | `gmail_plus`). See [docs/skills/duckduckgo-email.md](docs/skills/duckduckgo-email.md)
+- **Hands-off AgentMail:** `mail_create_inbox` (one-click `@agentmail.to`), `mail_agentmail_connect`, agent signup/verify, GUI **+ Agent email** + Agent Email page. `mail_wait_otp` uses last AgentMail inbox when configured. See [docs/skills/agentmail-hands-off.md](docs/skills/agentmail-hands-off.md)
 - **Operator UI:** Dolphin{anty}-inspired control panel at `http://127.0.0.1:3847/` (`openantyd serve` + `openanty ui`)
 - **Phase B/C/D features:** proxy pool, extensions, bulk profiles, fingerprint health, cookie robot, scenario runner, synchronizer navigate, local team users, AdsPower API shim (`/browser/*`)
 - **Agent-first install:** npm package `packages/npm/openanty` — `npx -y openanty@latest mcp` downloads GitHub Release binaries

@@ -39,6 +39,9 @@
         <button class="nav-item" data-view="team">
           <span class="ico">👥</span> Team
         </button>
+        <button class="nav-item" data-view="email">
+          <span class="ico">✉</span> Agent Email
+        </button>
         <button class="nav-item" data-view="settings">
           <span class="ico">⚙</span> Settings
         </button>
@@ -60,6 +63,7 @@
             <input id="search" type="search" placeholder="Search profiles, tags, notes…" />
           </div>
           <button class="btn ghost" id="btn-refresh">Refresh</button>
+          <button class="btn" id="btn-create-email" title="One-click AgentMail / alias email">+ Agent email</button>
           <button class="btn primary" id="btn-create">+ Create profile</button>
         </div>
       </header>
@@ -218,6 +222,44 @@
             <thead><tr><th>User</th><th>Role</th><th>Created</th><th></th></tr></thead>
             <tbody id="team-body"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section id="view-email" class="view">
+        <div class="panel">
+          <h2>Agent email (hands-off)</h2>
+          <p class="muted">
+            <strong>Recommended:</strong> AgentMail — one API key, then one button creates a full inbox
+            (<code>@agentmail.to</code>. OTP via <code>mail_wait_otp</code> automatically.
+          </p>
+          <div id="email-overview" class="log">Loading…</div>
+          <h3 class="mt">1. Connect AgentMail</h3>
+          <div class="form-row">
+            <input id="am-api-key" type="password" placeholder="am_… API key from console.agentmail.to" class="grow" />
+            <button class="btn primary" id="btn-am-connect">Save API key</button>
+          </div>
+          <p class="muted sm">Or env <code>AGENTMAIL_API_KEY</code>. Or agent signup: human email + username below.</p>
+          <div class="form-row">
+            <input id="am-human-email" placeholder="your@gmail.com (for agent signup OTP)" class="grow" />
+            <input id="am-username" placeholder="agent username" />
+            <button class="btn" id="btn-am-signup">Agent signup</button>
+          </div>
+          <div class="form-row">
+            <input id="am-otp" placeholder="6-digit OTP from email" />
+            <button class="btn" id="btn-am-verify">Verify OTP</button>
+          </div>
+          <h3 class="mt">2. Create agent email</h3>
+          <div class="form-row">
+            <select id="email-provider">
+              <option value="agentmail">AgentMail (recommended)</option>
+              <option value="gmail_plus">Gmail +alias (needs Gmail connect)</option>
+              <option value="duckduckgo">DuckDuckGo @duck.com (experimental)</option>
+            </select>
+            <button class="btn primary" id="btn-email-create">+ Create agent email</button>
+          </div>
+          <pre id="email-result" class="log"></pre>
+          <h3 class="mt">Last created</h3>
+          <code id="email-last" class="token">—</code>
         </div>
       </section>
 

@@ -1276,13 +1276,227 @@ impl OpenAntyService {
         req: crate::mail::WaitOtpRequest,
     ) -> Result<crate::mail::WaitOtpResult, OpenAntyError> {
         let key = self.mail_key()?;
+        // Prefer AgentMail if configured (hands-off path)
+        if let Ok(Some(am)) = crate::mail_agentmail::load_config(&self.data_dir, &key) {
+            if let Some(inbox_id) = am.default_inbox_id.clone() {
+                return Ok(
+                    crate::mail_agentmail::wait_for_otp(&am.api_key, &inbox_id, req).await,
+                );
+            }
+        }
         let account = crate::mail::load_account(&self.data_dir, &key)
             .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
             .ok_or_else(|| {
                 OpenAntyError::app(ErrorCode::NotInitialized, "mail not configured")
-                    .with_hint("mail_connect with Gmail + app password first")
+                    .with_hint(
+                        "Connect AgentMail (mail_agentmail_connect + mail_create_inbox) or Gmail (mail_connect)",
+                    )
             })?;
         Ok(crate::mail::wait_for_otp(account, req).await)
+    }
+
+    pub fn mail_agentmail_status(&self) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        match crate::mail_agentmail::load_config(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+        {
+            Some(c) => Ok(serde_json::json!({
+                "ok": true,
+                "status": c.public_status(),
+            })),
+            None => Ok(serde_json::json!({
+                "ok": true,
+                "configured": false,
+                "provider": "agentmail",
+                "hands_off": true,
+                "hint": "Get API key from https://console.agentmail.to or use mail_agent_signup. Then mail_create_inbox for one-click emails."
+            })),
+        }
+    }
+
+    pub fn mail_agentmail_connect(
+        &self,
+        api_key: &str,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let api_key = api_key.trim().to_string();
+        if api_key.is_empty() {
+            return Err(OpenAntyError::app(
+                ErrorCode::InvalidRequest,
+                "api_key required",
+            ));
+        }
+        let key = self.mail_key()?;
+        let existing = crate::mail_agentmail::load_config(&self.data_dir, &key)
+            .ok()
+            .flatten();
+        let cfg = crate::mail_agentmail::AgentMailConfig {
+            api_key,
+            default_inbox_id: existing.as_ref().and_then(|e| e.default_inbox_id.clone()),
+            default_email: existing.as_ref().and_then(|e| e.default_email.clone()),
+            saved_at: Utc::now(),
+        };
+        crate::mail_agentmail::save_config(&self.data_dir, &key, &cfg)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        self.store
+            .audit("mail.agentmail_connect", "mail", "agentmail", "{}");
+        Ok(serde_json::json!({
+            "ok": true,
+            "configured": true,
+            "status": cfg.public_status(),
+            "next": "mail_create_inbox (one click) → use email on signup → mail_wait_otp"
+        }))
+    }
+
+    pub fn mail_agentmail_disconnect(&self) -> Result<serde_json::Value, OpenAntyError> {
+        crate::mail_agentmail::clear_config(&self.data_dir)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        Ok(serde_json::json!({ "ok": true, "configured": false, "provider": "agentmail" }))
+    }
+
+    /// One-click: create AgentMail inbox (or Gmail+/Duck alias).
+    pub async fn mail_create_inbox(
+        &self,
+        provider: Option<&str>,
+        username: Option<&str>,
+        display_name: Option<&str>,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        let provider = provider
+            .unwrap_or("agentmail")
+            .to_lowercase();
+
+        match provider.as_str() {
+            "agentmail" | "am" | "default" => {
+                let mut cfg = crate::mail_agentmail::load_config(&self.data_dir, &key)
+                    .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+                    .ok_or_else(|| {
+                        OpenAntyError::app(
+                            ErrorCode::NotInitialized,
+                            "AgentMail not configured",
+                        )
+                        .with_hint(
+                            "mail_agentmail_connect with API key from console.agentmail.to, or mail_agent_signup",
+                        )
+                    })?;
+                let inbox = crate::mail_agentmail::create_inbox(
+                    &cfg.api_key,
+                    username,
+                    display_name,
+                    None,
+                )
+                .await
+                .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+
+                cfg.default_inbox_id = Some(inbox.inbox_id.clone());
+                cfg.default_email = Some(inbox.email.clone());
+                let _ = crate::mail_agentmail::save_config(&self.data_dir, &key, &cfg);
+
+                self.store.audit(
+                    "mail.create_inbox",
+                    "mail",
+                    &inbox.email,
+                    "{}",
+                );
+                Ok(serde_json::json!({
+                    "ok": true,
+                    "provider": "agentmail",
+                    "hands_off": true,
+                    "inbox_id": inbox.inbox_id,
+                    "email": inbox.email,
+                    "display_name": inbox.display_name,
+                    "pod_id": inbox.pod_id,
+                    "next": "Use this email on signup, then mail_wait_otp — no Gmail needed"
+                }))
+            }
+            other => {
+                // Fall back to alias providers
+                self.mail_create_alias(other).await
+            }
+        }
+    }
+
+    pub async fn mail_agent_signup(
+        &self,
+        human_email: &str,
+        username: &str,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let res = crate::mail_agentmail::agent_sign_up(human_email, username)
+            .await
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        // Persist api_key if present
+        if let Some(api_key) = res.get("api_key").and_then(|x| x.as_str()) {
+            let key = self.mail_key()?;
+            let inbox_id = res
+                .get("inbox_id")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
+            let cfg = crate::mail_agentmail::AgentMailConfig {
+                api_key: api_key.to_string(),
+                default_inbox_id: inbox_id,
+                default_email: Some(format!("{username}@agentmail.to")),
+                saved_at: Utc::now(),
+            };
+            let _ = crate::mail_agentmail::save_config(&self.data_dir, &key, &cfg);
+        }
+        Ok(serde_json::json!({
+            "ok": true,
+            "result": res,
+            "next": "Check human_email for 6-digit OTP, then mail_agent_verify"
+        }))
+    }
+
+    pub async fn mail_agent_verify(
+        &self,
+        otp_code: &str,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        let cfg = crate::mail_agentmail::load_config(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+            .ok_or_else(|| {
+                OpenAntyError::app(ErrorCode::NotInitialized, "AgentMail not configured")
+            })?;
+        let res = crate::mail_agentmail::agent_verify(&cfg.api_key, otp_code)
+            .await
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        Ok(serde_json::json!({ "ok": true, "result": res }))
+    }
+
+    /// Unified email status for GUI.
+    pub fn mail_overview(&self) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        let agentmail = crate::mail_agentmail::load_config(&self.data_dir, &key)
+            .ok()
+            .flatten()
+            .map(|c| c.public_status());
+        let gmail = crate::mail::load_account(&self.data_dir, &key)
+            .ok()
+            .flatten()
+            .map(|a| a.public_status());
+        let duck = crate::mail_duck::load_token(&self.data_dir, &key)
+            .ok()
+            .flatten()
+            .map(|t| t.public_status());
+        let preferred = if agentmail.is_some() {
+            "agentmail"
+        } else if gmail.is_some() {
+            "gmail"
+        } else if duck.is_some() {
+            "duckduckgo"
+        } else {
+            "none"
+        };
+        Ok(serde_json::json!({
+            "ok": true,
+            "preferred": preferred,
+            "agentmail": agentmail,
+            "gmail": gmail,
+            "duckduckgo": duck,
+            "create_button": {
+                "label": "Create agent email",
+                "provider": if preferred == "none" { "agentmail" } else { preferred },
+                "ready": preferred != "none" || agentmail.is_some(),
+            }
+        }))
     }
 
     // —— DuckDuckGo private @duck.com (experimental / unofficial) ——

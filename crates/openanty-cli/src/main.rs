@@ -121,6 +121,35 @@ enum MailCmd {
         #[arg(long, default_value = "duckduckgo")]
         provider: String,
     },
+    /// Connect AgentMail API key (hands-off emails)
+    AgentmailConnect {
+        #[arg(long, env = "AGENTMAIL_API_KEY")]
+        api_key: Option<String>,
+    },
+    /// AgentMail status
+    AgentmailStatus,
+    /// Remove AgentMail key
+    AgentmailDisconnect,
+    /// ONE-CLICK create agent email (default AgentMail)
+    CreateInbox {
+        #[arg(long, default_value = "agentmail")]
+        provider: String,
+        #[arg(long)]
+        username: Option<String>,
+        #[arg(long)]
+        display_name: Option<String>,
+    },
+    /// Bootstrap AgentMail (OTP to your email)
+    AgentSignup {
+        human_email: String,
+        username: String,
+    },
+    /// Verify AgentMail signup OTP
+    AgentVerify {
+        otp_code: String,
+    },
+    /// Show all mail providers (for GUI)
+    Overview,
 }
 
 #[derive(Subcommand, Debug)]
@@ -412,6 +441,79 @@ async fn main() -> Result<()> {
                     if res.get("ok") != Some(&serde_json::json!(true)) {
                         std::process::exit(2);
                     }
+                }
+                MailCmd::AgentmailConnect { api_key } => {
+                    let key = api_key
+                        .or_else(|| std::env::var("AGENTMAIL_API_KEY").ok())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("api_key via --api-key or AGENTMAIL_API_KEY")
+                        })?;
+                    let res = svc
+                        .mail_agentmail_connect(&key)
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                MailCmd::AgentmailStatus => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_agentmail_status()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::AgentmailDisconnect => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_agentmail_disconnect()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::CreateInbox {
+                    provider,
+                    username,
+                    display_name,
+                } => {
+                    let res = svc
+                        .mail_create_inbox(
+                            Some(&provider),
+                            username.as_deref(),
+                            display_name.as_deref(),
+                        )
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                    if res.get("ok") != Some(&serde_json::json!(true)) {
+                        std::process::exit(2);
+                    }
+                }
+                MailCmd::AgentSignup {
+                    human_email,
+                    username,
+                } => {
+                    let res = svc
+                        .mail_agent_signup(&human_email, &username)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                MailCmd::AgentVerify { otp_code } => {
+                    let res = svc
+                        .mail_agent_verify(&otp_code)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                MailCmd::Overview => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_overview()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
                 }
             }
         }

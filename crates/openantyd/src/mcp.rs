@@ -490,14 +490,78 @@ fn tool_defs() -> Vec<Value> {
         ),
         tool(
             "mail_create_alias",
-            "Create a new alias address. Providers: duckduckgo (private @duck.com via unofficial API), gmail_plus (you+tag@gmail.com). OTPs still arrive on the forward/Gmail inbox — use mail_wait_otp.",
+            "Create a new alias address. Providers: duckduckgo (private @duck.com via unofficial API), gmail_plus (you+tag@gmail.com). Prefer mail_create_inbox for AgentMail hands-off.",
             json!({
                 "type": "object",
                 "properties": {
                     "provider": {
                         "type": "string",
-                        "description": "duckduckgo (default) | gmail_plus"
+                        "description": "duckduckgo | gmail_plus"
                     }
+                }
+            }),
+        ),
+        tool(
+            "mail_agentmail_connect",
+            "Connect AgentMail API key (from console.agentmail.to). Enables one-click Create agent email.",
+            json!({
+                "type": "object",
+                "required": ["api_key"],
+                "properties": {
+                    "api_key": { "type": "string", "description": "am_... API key" }
+                }
+            }),
+        ),
+        tool(
+            "mail_agentmail_status",
+            "AgentMail configuration status.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_agentmail_disconnect",
+            "Remove AgentMail API key.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_create_inbox",
+            "ONE-CLICK: Create a new agent email. Default provider agentmail (full inbox). Also agentmail|gmail_plus|duckduckgo via provider. Then use address on signup + mail_wait_otp.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "description": "agentmail (default) | gmail_plus | duckduckgo"
+                    },
+                    "username": { "type": "string", "description": "Optional AgentMail username (random if omitted)" },
+                    "display_name": { "type": "string" }
+                }
+            }),
+        ),
+        tool(
+            "mail_overview",
+            "All mail providers status for UI (AgentMail / Gmail / Duck).",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_agent_signup",
+            "Bootstrap AgentMail without console: register with human email + username; OTP sent to human; then mail_agent_verify.",
+            json!({
+                "type": "object",
+                "required": ["human_email", "username"],
+                "properties": {
+                    "human_email": { "type": "string" },
+                    "username": { "type": "string", "description": "Creates username@agentmail.to" }
+                }
+            }),
+        ),
+        tool(
+            "mail_agent_verify",
+            "Complete AgentMail sign-up with 6-digit OTP from human email.",
+            json!({
+                "type": "object",
+                "required": ["otp_code"],
+                "properties": {
+                    "otp_code": { "type": "string" }
                 }
             }),
         ),
@@ -1033,6 +1097,44 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
                 .unwrap_or("duckduckgo");
             service
                 .mail_create_alias(provider)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "mail_agentmail_connect" => {
+            let api_key = arg_str(&args, "api_key")?;
+            service
+                .mail_agentmail_connect(&api_key)
+                .map_err(|e| e.to_string())?
+        }
+        "mail_agentmail_status" => service
+            .mail_agentmail_status()
+            .map_err(|e| e.to_string())?,
+        "mail_agentmail_disconnect" => service
+            .mail_agentmail_disconnect()
+            .map_err(|e| e.to_string())?,
+        "mail_create_inbox" => {
+            service
+                .mail_create_inbox(
+                    args.get("provider").and_then(|v| v.as_str()),
+                    args.get("username").and_then(|v| v.as_str()),
+                    args.get("display_name").and_then(|v| v.as_str()),
+                )
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "mail_overview" => service.mail_overview().map_err(|e| e.to_string())?,
+        "mail_agent_signup" => {
+            let human_email = arg_str(&args, "human_email")?;
+            let username = arg_str(&args, "username")?;
+            service
+                .mail_agent_signup(&human_email, &username)
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "mail_agent_verify" => {
+            let otp = arg_str(&args, "otp_code")?;
+            service
+                .mail_agent_verify(&otp)
                 .await
                 .map_err(|e| e.to_string())?
         }

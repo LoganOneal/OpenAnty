@@ -75,6 +75,16 @@ pub fn router(service: Arc<OpenAntyService>) -> Router {
         .route("/v1/mail/duck/connect", post(mail_duck_connect))
         .route("/v1/mail/duck/disconnect", post(mail_duck_disconnect))
         .route("/v1/mail/create-alias", post(mail_create_alias))
+        .route("/v1/mail/overview", get(mail_overview))
+        .route("/v1/mail/create-inbox", post(mail_create_inbox))
+        .route("/v1/mail/agentmail/status", get(mail_agentmail_status))
+        .route("/v1/mail/agentmail/connect", post(mail_agentmail_connect))
+        .route(
+            "/v1/mail/agentmail/disconnect",
+            post(mail_agentmail_disconnect),
+        )
+        .route("/v1/mail/agent/signup", post(mail_agent_signup))
+        .route("/v1/mail/agent/verify", post(mail_agent_verify))
         // AdsPower-compatible shim subset
         .route("/browser/list", get(adspower_list))
         .route("/browser/start", get(adspower_start))
@@ -1127,6 +1137,131 @@ async fn mail_create_alias(
     state
         .service
         .mail_create_alias(body.provider.as_deref().unwrap_or("duckduckgo"))
+        .await
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_overview(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_overview()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct CreateInboxBody {
+    provider: Option<String>,
+    username: Option<String>,
+    display_name: Option<String>,
+}
+
+async fn mail_create_inbox(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<CreateInboxBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_create_inbox(
+            body.provider.as_deref(),
+            body.username.as_deref(),
+            body.display_name.as_deref(),
+        )
+        .await
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_agentmail_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_agentmail_status()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct AgentMailConnectBody {
+    api_key: String,
+}
+
+async fn mail_agentmail_connect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AgentMailConnectBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_agentmail_connect(&body.api_key)
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_agentmail_disconnect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_agentmail_disconnect()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct AgentSignupBody {
+    human_email: String,
+    username: String,
+}
+
+async fn mail_agent_signup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AgentSignupBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_agent_signup(&body.human_email, &body.username)
+        .await
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct AgentVerifyBody {
+    otp_code: String,
+}
+
+async fn mail_agent_verify(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AgentVerifyBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_agent_verify(&body.otp_code)
         .await
         .map(Json)
         .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))

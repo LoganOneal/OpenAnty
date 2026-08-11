@@ -69,16 +69,24 @@ Requires **Node 18+** and **Chrome/Chromium**. First run downloads platform bina
 4. Loop: `page_links` (same host) → `page_navigate` → `page_content`  
 5. `stop_session`  
 
-### 3. Signup OTP (Gmail)
+### 3. Hands-off agent email (recommended)
 
 ```bash
-# One-time: Google App Password (not your Gmail password)
-openanty mail connect you@gmail.com --password "xxxx xxxx xxxx xxxx"
-# Agent: after form submit
-# mail_wait_otp { "from_contains": "reddit.com", "timeout_seconds": 180 }
+# Once: API key from https://console.agentmail.to
+openanty mail agentmail-connect --api-key "am_..."
+# Or GUI: Agent Email → paste key → Save
+
+# One click / one command forever:
+openanty mail create-inbox
+# → { "email": "something@agentmail.to", "inbox_id": "..." }
+
+# After signup form:
+# mail_wait_otp { "from_contains": "reddit", "timeout_seconds": 180 }
 ```
 
-Recipe: [docs/skills/gmail-otp.md](docs/skills/gmail-otp.md) · scrape: [docs/skills/scrape-domain.md](docs/skills/scrape-domain.md) · gaps: [docs/FEATURE_GAP_AND_AGENT_FIRST.md](docs/FEATURE_GAP_AND_AGENT_FIRST.md)
+Also: Gmail+ (`create-inbox --provider gmail_plus`) and Duck (`--provider duckduckgo`).
+
+Recipes: [agentmail-hands-off](docs/skills/agentmail-hands-off.md) · [gmail-otp](docs/skills/gmail-otp.md) · [duckduckgo-email](docs/skills/duckduckgo-email.md)
 
 ## Quick start (developers)
 

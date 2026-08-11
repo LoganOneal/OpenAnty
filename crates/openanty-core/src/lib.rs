@@ -6,6 +6,7 @@ pub mod config;
 pub mod crypto;
 pub mod features;
 pub mod mail;
+pub mod mail_agentmail;
 pub mod mail_duck;
 pub mod paths;
 pub mod proxy;

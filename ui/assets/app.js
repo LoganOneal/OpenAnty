@@ -179,6 +179,7 @@
       sync: ["Synchronizer", "Repeat actions across multiple profiles"],
       cookies: ["Cookie Robot", "Warm profiles and harvest cookies"],
       team: ["Team", "Local roles and permissions"],
+      email: ["Agent Email", "One-click agent inboxes (AgentMail) + Gmail / Duck"],
       settings: ["Settings", "Doctor, health, bulk tools, API"],
     };
     const [t, s] = titles[name] || ["Open Anty", ""];
@@ -188,6 +189,55 @@
     if (name === "extensions") loadExt();
     if (name === "scenarios") loadScenarios();
     if (name === "team") loadTeam();
+    if (name === "email") loadEmailOverview();
+  }
+
+  async function loadEmailOverview() {
+    try {
+      const data = await api("/v1/mail/overview");
+      $("#email-overview").textContent = JSON.stringify(data, null, 2);
+      if (data.preferred && data.preferred !== "none") {
+        const sel = $("#email-provider");
+        if (sel && [...sel.options].some((o) => o.value === data.preferred)) {
+          sel.value = data.preferred === "gmail" ? "gmail_plus" : data.preferred;
+        }
+      }
+      if (data.agentmail && data.agentmail.default_email) {
+        $("#email-last").textContent = data.agentmail.default_email;
+      }
+    } catch (e) {
+      $("#email-overview").textContent = e.message;
+    }
+  }
+
+  async function createAgentEmail() {
+    const provider = ($("#email-provider") && $("#email-provider").value) || "agentmail";
+    try {
+      toast("Creating agent email…");
+      const res = await api("/v1/mail/create-inbox", {
+        method: "POST",
+        body: JSON.stringify({ provider }),
+      });
+      $("#email-result").textContent = JSON.stringify(res, null, 2);
+      if (res.email) {
+        $("#email-last").textContent = res.email;
+        try {
+          await navigator.clipboard.writeText(res.email);
+          toast("Created " + res.email + " (copied)");
+        } catch (_) {
+          toast("Created " + res.email);
+        }
+      } else if (res.address) {
+        $("#email-last").textContent = res.address;
+        toast("Created " + res.address);
+      } else {
+        toast(res.error || "Create failed", true);
+      }
+      loadEmailOverview();
+    } catch (e) {
+      $("#email-result").textContent = e.message;
+      toast(e.message, true);
+    }
   }
 
   async function loadProxies() {
@@ -366,6 +416,61 @@
   $$(".nav-item").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
   $("#btn-refresh").addEventListener("click", () => refresh().catch((e) => toast(e.message, true)));
   $("#btn-create").addEventListener("click", openModal);
+  if ($("#btn-create-email")) {
+    $("#btn-create-email").addEventListener("click", () => createAgentEmail());
+  }
+  if ($("#btn-email-create")) {
+    $("#btn-email-create").addEventListener("click", () => createAgentEmail());
+  }
+  if ($("#btn-am-connect")) {
+    $("#btn-am-connect").addEventListener("click", async () => {
+      try {
+        const api_key = $("#am-api-key").value.trim();
+        if (!api_key) return toast("API key required", true);
+        const res = await api("/v1/mail/agentmail/connect", {
+          method: "POST",
+          body: JSON.stringify({ api_key }),
+        });
+        $("#email-result").textContent = JSON.stringify(res, null, 2);
+        toast("AgentMail connected");
+        loadEmailOverview();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    });
+  }
+  if ($("#btn-am-signup")) {
+    $("#btn-am-signup").addEventListener("click", async () => {
+      try {
+        const res = await api("/v1/mail/agent/signup", {
+          method: "POST",
+          body: JSON.stringify({
+            human_email: $("#am-human-email").value.trim(),
+            username: $("#am-username").value.trim(),
+          }),
+        });
+        $("#email-result").textContent = JSON.stringify(res, null, 2);
+        toast("Check your email for OTP");
+      } catch (e) {
+        toast(e.message, true);
+      }
+    });
+  }
+  if ($("#btn-am-verify")) {
+    $("#btn-am-verify").addEventListener("click", async () => {
+      try {
+        const res = await api("/v1/mail/agent/verify", {
+          method: "POST",
+          body: JSON.stringify({ otp_code: $("#am-otp").value.trim() }),
+        });
+        $("#email-result").textContent = JSON.stringify(res, null, 2);
+        toast("Verified");
+        loadEmailOverview();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    });
+  }
   $("#modal-close").addEventListener("click", closeModal);
   $("#modal-cancel").addEventListener("click", closeModal);
   $("#modal-save").addEventListener("click", () => createProfile().catch((e) => toast(e.message, true)));
