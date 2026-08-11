@@ -29,6 +29,10 @@ parking_lot = { workspace = true }
 which = { workspace = true }
 futures-util = { workspace = true }
 tokio-tungstenite = { workspace = true }
+imap = { workspace = true }
+native-tls = { workspace = true }
+mailparse = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

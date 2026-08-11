@@ -398,6 +398,74 @@ fn tool_defs() -> Vec<Value> {
                 }
             }),
         ),
+        // —— Mail / OTP (BYO Gmail IMAP) ——
+        tool(
+            "mail_status",
+            "Show whether BYO Gmail/IMAP is configured (password never returned).",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_connect",
+            "Connect BYO Gmail (or generic IMAP). Prefer Gmail App Password (not account password). Saves encrypted credentials locally.",
+            json!({
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                    "provider": { "type": "string", "description": "gmail (default) or imap" },
+                    "username": { "type": "string", "description": "e.g. you@gmail.com" },
+                    "password": { "type": "string", "description": "Gmail App Password (16 chars)" },
+                    "host": { "type": "string", "description": "IMAP host if not gmail" },
+                    "port": { "type": "integer", "description": "Default 993" },
+                    "folder": { "type": "string", "description": "Default INBOX" },
+                    "name": { "type": "string" },
+                    "test": { "type": "boolean", "description": "Test login (default true)" }
+                }
+            }),
+        ),
+        tool(
+            "mail_disconnect",
+            "Remove saved mail credentials from this machine.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
+            "mail_list",
+            "List recent inbox messages (snippets + any extracted OTPs). Does not mark read.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "limit": { "type": "integer", "description": "Default 10, max 50" }
+                }
+            }),
+        ),
+        tool(
+            "mail_wait_otp",
+            "Poll inbox until a verification code arrives. Use after signup forms. Filters: from_contains (e.g. reddit.com), subject_contains, body_contains.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "timeout_seconds": { "type": "integer", "description": "Default 120, max 600" },
+                    "poll_seconds": { "type": "integer", "description": "Default 5" },
+                    "from_contains": { "type": "string", "description": "e.g. reddit.com or noreply" },
+                    "subject_contains": { "type": "string" },
+                    "body_contains": { "type": "string" },
+                    "to_contains": { "type": "string", "description": "Filter +alias recipient" },
+                    "otp_regex": { "type": "string", "description": "Optional custom capture regex" },
+                    "max_age_minutes": { "type": "integer" },
+                    "scan_limit": { "type": "integer" }
+                }
+            }),
+        ),
+        tool(
+            "mail_handoff",
+            "Human-in-the-loop: return instructions asking the user to paste an OTP (when BYO mail unavailable).",
+            json!({
+                "type": "object",
+                "properties": {
+                    "context": { "type": "string", "description": "e.g. Reddit email verification" },
+                    "email_hint": { "type": "string" }
+                }
+            }),
+        ),
     ]
 }
 
@@ -852,6 +920,64 @@ async fn handle_tool_call(service: Arc<OpenAntyService>, params: Value) -> Resul
                 "session_id": session_id,
                 "typed": true,
                 "selector": selector
+            })
+        }
+        "mail_status" => service.mail_status().map_err(|e| e.to_string())?,
+        "mail_connect" => {
+            let username = arg_str(&args, "username")?;
+            let password = arg_str(&args, "password")?;
+            let provider = args
+                .get("provider")
+                .and_then(|v| v.as_str())
+                .unwrap_or("gmail");
+            let test = args.get("test").and_then(|v| v.as_bool()).unwrap_or(true);
+            service
+                .mail_connect(
+                    provider,
+                    &username,
+                    &password,
+                    args.get("host").and_then(|v| v.as_str()),
+                    args.get("port").and_then(|v| v.as_u64()).map(|p| p as u16),
+                    args.get("folder").and_then(|v| v.as_str()),
+                    args.get("name").and_then(|v| v.as_str()),
+                    test,
+                )
+                .map_err(|e| e.to_string())?
+        }
+        "mail_disconnect" => service.mail_disconnect().map_err(|e| e.to_string())?,
+        "mail_list" => {
+            let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as u32;
+            service.mail_list(limit).map_err(|e| e.to_string())?
+        }
+        "mail_wait_otp" => {
+            let req: openanty_core::mail::WaitOtpRequest =
+                serde_json::from_value(args).map_err(|e| e.to_string())?;
+            let result = service.mail_wait_otp(req).await.map_err(|e| e.to_string())?;
+            serde_json::to_value(result).unwrap_or(json!({ "ok": false }))
+        }
+        "mail_handoff" => {
+            let context = args
+                .get("context")
+                .and_then(|v| v.as_str())
+                .unwrap_or("email verification");
+            let email_hint = args
+                .get("email_hint")
+                .and_then(|v| v.as_str())
+                .unwrap_or("(the signup email)");
+            json!({
+                "ok": true,
+                "request_id": rid,
+                "needs_human": true,
+                "message": format!(
+                    "Please open the inbox for {email_hint}, find the {context} message, and paste the verification code here. Then the agent will call page tools to enter it."
+                ),
+                "instructions": [
+                    "Open your Gmail (or the inbox used at signup)",
+                    "Find the latest verification email",
+                    "Copy the 6-digit (or 4–8 digit) code",
+                    "Paste the code in chat for the agent"
+                ],
+                "alternative": "Or configure BYO Gmail: mail_connect with an App Password, then mail_wait_otp"
             })
         }
         other => return Err(format!("unknown tool: {other}")),

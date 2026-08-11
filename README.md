@@ -69,7 +69,16 @@ Requires **Node 18+** and **Chrome/Chromium**. First run downloads platform bina
 4. Loop: `page_links` (same host) → `page_navigate` → `page_content`  
 5. `stop_session`  
 
-Full recipe: [docs/skills/scrape-domain.md](docs/skills/scrape-domain.md) · gap analysis: [docs/FEATURE_GAP_AND_AGENT_FIRST.md](docs/FEATURE_GAP_AND_AGENT_FIRST.md)
+### 3. Signup OTP (Gmail)
+
+```bash
+# One-time: Google App Password (not your Gmail password)
+openanty mail connect you@gmail.com --password "xxxx xxxx xxxx xxxx"
+# Agent: after form submit
+# mail_wait_otp { "from_contains": "reddit.com", "timeout_seconds": 180 }
+```
+
+Recipe: [docs/skills/gmail-otp.md](docs/skills/gmail-otp.md) · scrape: [docs/skills/scrape-domain.md](docs/skills/scrape-domain.md) · gaps: [docs/FEATURE_GAP_AND_AGENT_FIRST.md](docs/FEATURE_GAP_AND_AGENT_FIRST.md)
 
 ## Quick start (developers)
 

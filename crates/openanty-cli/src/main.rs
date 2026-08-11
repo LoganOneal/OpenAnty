@@ -56,6 +56,54 @@ enum Commands {
         #[arg(long)]
         bind: Option<String>,
     },
+    /// BYO Gmail / IMAP for OTP extraction
+    Mail {
+        #[command(subcommand)]
+        cmd: MailCmd,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum MailCmd {
+    /// Show mail config status (no secrets)
+    Status,
+    /// Save Gmail/IMAP credentials (Gmail App Password recommended)
+    Connect {
+        /// Email address
+        username: String,
+        /// App password (or IMAP password). Prefer env OPENANTY_MAIL_PASSWORD to avoid shell history.
+        #[arg(long, env = "OPENANTY_MAIL_PASSWORD")]
+        password: Option<String>,
+        #[arg(long, default_value = "gmail")]
+        provider: String,
+        #[arg(long)]
+        host: Option<String>,
+        #[arg(long)]
+        port: Option<u16>,
+        #[arg(long, default_value = "INBOX")]
+        folder: String,
+        /// Skip IMAP login test
+        #[arg(long)]
+        no_test: bool,
+    },
+    /// Remove saved credentials
+    Disconnect,
+    /// List recent messages
+    List {
+        #[arg(long, default_value_t = 10)]
+        limit: u32,
+    },
+    /// Poll for a verification code
+    WaitOtp {
+        #[arg(long)]
+        from: Option<String>,
+        #[arg(long)]
+        subject: Option<String>,
+        #[arg(long, default_value_t = 120)]
+        timeout: u64,
+        #[arg(long, default_value_t = 5)]
+        poll: u64,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -222,6 +270,93 @@ async fn main() -> Result<()> {
                     let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
                 }
                 println!("Opened browser. If the page fails to load, run: openantyd serve");
+            }
+        }
+        Commands::Mail { cmd } => {
+            let svc = open_svc(data_dir)?;
+            match cmd {
+                MailCmd::Status => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_status().map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::Connect {
+                    username,
+                    password,
+                    provider,
+                    host,
+                    port,
+                    folder,
+                    no_test,
+                } => {
+                    let password = password
+                        .or_else(|| std::env::var("OPENANTY_MAIL_PASSWORD").ok())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "password required via --password or OPENANTY_MAIL_PASSWORD"
+                            )
+                        })?;
+                    let res = svc
+                        .mail_connect(
+                            &provider,
+                            &username,
+                            &password,
+                            host.as_deref(),
+                            port,
+                            Some(&folder),
+                            None,
+                            !no_test,
+                        )
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                MailCmd::Disconnect => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_disconnect()
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::List { limit } => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(
+                            &svc.mail_list(limit)
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                        )?
+                    );
+                }
+                MailCmd::WaitOtp {
+                    from,
+                    subject,
+                    timeout,
+                    poll,
+                } => {
+                    let req = openanty_core::mail::WaitOtpRequest {
+                        timeout_seconds: timeout,
+                        poll_seconds: poll,
+                        from_contains: from,
+                        subject_contains: subject,
+                        body_contains: None,
+                        otp_regex: None,
+                        max_age_minutes: 30,
+                        scan_limit: 20,
+                        to_contains: None,
+                    };
+                    let res = svc
+                        .mail_wait_otp(req)
+                        .await
+                        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                    if !res.found {
+                        std::process::exit(2);
+                    }
+                }
             }
         }
         Commands::Profile { cmd } => match cmd {

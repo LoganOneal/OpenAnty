@@ -1150,6 +1150,141 @@ impl OpenAntyService {
         }))
     }
 
+    // —— Mail (BYO Gmail / IMAP OTP) ——
+
+    fn mail_key(&self) -> Result<MasterKey, OpenAntyError> {
+        MasterKey::load_or_create(&self.data_dir)
+            .map(|(k, _)| k)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e.to_string()))
+    }
+
+    pub fn mail_status(&self) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        match crate::mail::load_account(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+        {
+            Some(acc) => Ok(serde_json::json!({
+                "ok": true,
+                "configured": true,
+                "account": acc.public_status(),
+            })),
+            None => Ok(serde_json::json!({
+                "ok": true,
+                "configured": false,
+                "hint": "Call mail_connect with Gmail address + app password, or set OPENANTY_MAIL_USER / OPENANTY_MAIL_PASSWORD"
+            })),
+        }
+    }
+
+    pub fn mail_connect(
+        &self,
+        provider: &str,
+        username: &str,
+        password: &str,
+        host: Option<&str>,
+        port: Option<u16>,
+        folder: Option<&str>,
+        name: Option<&str>,
+        test: bool,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let provider = provider.to_lowercase();
+        let mut account = if provider == "gmail" || (host.is_none() && username.contains("@gmail"))
+        {
+            crate::mail::MailAccount::gmail(username, password)
+        } else {
+            crate::mail::MailAccount {
+                name: name.unwrap_or("imap").into(),
+                host: host.unwrap_or("imap.gmail.com").into(),
+                port: port.unwrap_or(993),
+                username: username.into(),
+                password: password.replace(' ', ""),
+                provider: if provider.is_empty() {
+                    "imap".into()
+                } else {
+                    provider.clone()
+                },
+                folder: folder.unwrap_or("INBOX").into(),
+                saved_at: Utc::now(),
+            }
+        };
+        if let Some(n) = name {
+            account.name = n.into();
+        }
+        if let Some(f) = folder {
+            account.folder = f.into();
+        }
+        if let Some(h) = host {
+            account.host = h.into();
+        }
+        if let Some(p) = port {
+            account.port = p;
+        }
+
+        let mut test_result = None;
+        if test {
+            match crate::mail::test_connection(&account) {
+                Ok(v) => test_result = Some(v),
+                Err(e) => {
+                    return Err(OpenAntyError::app(ErrorCode::InvalidRequest, e).with_hint(
+                        "Gmail: enable 2-Step Verification, create App Password at myaccount.google.com/apppasswords, use that 16-char password (not your normal Gmail password)",
+                    ));
+                }
+            }
+        }
+
+        let key = self.mail_key()?;
+        crate::mail::save_account(&self.data_dir, &key, &account)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        self.store.audit("mail.connect", "mail", &account.username, "{}");
+        Ok(serde_json::json!({
+            "ok": true,
+            "configured": true,
+            "account": account.public_status(),
+            "test": test_result,
+            "next": "mail_wait_otp with from_contains e.g. reddit.com after signup"
+        }))
+    }
+
+    pub fn mail_disconnect(&self) -> Result<serde_json::Value, OpenAntyError> {
+        crate::mail::clear_account(&self.data_dir)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        Ok(serde_json::json!({ "ok": true, "configured": false }))
+    }
+
+    pub fn mail_list(
+        &self,
+        limit: u32,
+    ) -> Result<serde_json::Value, OpenAntyError> {
+        let key = self.mail_key()?;
+        let account = crate::mail::load_account(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+            .ok_or_else(|| {
+                OpenAntyError::app(ErrorCode::NotInitialized, "mail not configured")
+                    .with_hint("mail_connect first")
+            })?;
+        let items = crate::mail::list_recent(&account, limit, None)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?;
+        Ok(serde_json::json!({
+            "ok": true,
+            "count": items.len(),
+            "items": items,
+        }))
+    }
+
+    pub async fn mail_wait_otp(
+        &self,
+        req: crate::mail::WaitOtpRequest,
+    ) -> Result<crate::mail::WaitOtpResult, OpenAntyError> {
+        let key = self.mail_key()?;
+        let account = crate::mail::load_account(&self.data_dir, &key)
+            .map_err(|e| OpenAntyError::app(ErrorCode::Internal, e))?
+            .ok_or_else(|| {
+                OpenAntyError::app(ErrorCode::NotInitialized, "mail not configured")
+                    .with_hint("mail_connect with Gmail + app password first")
+            })?;
+        Ok(crate::mail::wait_for_otp(account, req).await)
+    }
+
     pub async fn synchronizer_navigate(
         &self,
         master_session_id: &str,

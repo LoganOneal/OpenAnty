@@ -65,6 +65,12 @@ pub fn router(service: Arc<OpenAntyService>) -> Router {
         .route("/v1/sessions/{id}/page/evaluate", post(page_evaluate))
         .route("/v1/sessions/{id}/page/click", post(page_click))
         .route("/v1/sessions/{id}/page/type", post(page_type))
+        // BYO Gmail / IMAP OTP
+        .route("/v1/mail/status", get(mail_status))
+        .route("/v1/mail/connect", post(mail_connect))
+        .route("/v1/mail/disconnect", post(mail_disconnect))
+        .route("/v1/mail/list", get(mail_list))
+        .route("/v1/mail/wait-otp", post(mail_wait_otp))
         // AdsPower-compatible shim subset
         .route("/browser/list", get(adspower_list))
         .route("/browser/start", get(adspower_start))
@@ -957,6 +963,103 @@ async fn page_type(
             )
         })?;
     Ok(Json(json!({ "ok": true, "session_id": id, "typed": true, "selector": body.selector })))
+}
+
+// —— Mail ——
+
+async fn mail_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_status()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct MailConnectBody {
+    provider: Option<String>,
+    username: String,
+    password: String,
+    host: Option<String>,
+    port: Option<u16>,
+    folder: Option<String>,
+    name: Option<String>,
+    test: Option<bool>,
+}
+
+async fn mail_connect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<MailConnectBody>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_connect(
+            body.provider.as_deref().unwrap_or("gmail"),
+            &body.username,
+            &body.password,
+            body.host.as_deref(),
+            body.port,
+            body.folder.as_deref(),
+            body.name.as_deref(),
+            body.test.unwrap_or(true),
+        )
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_disconnect(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_disconnect()
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+#[derive(Deserialize)]
+struct MailListQuery {
+    limit: Option<u32>,
+}
+
+async fn mail_list(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<MailListQuery>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_list(q.limit.unwrap_or(10))
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
+}
+
+async fn mail_wait_otp(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<openanty_core::mail::WaitOtpRequest>,
+) -> Result<Json<openanty_core::mail::WaitOtpResult>, ApiError> {
+    host_ok(&headers)?;
+    auth(&headers, &state.service)?;
+    state
+        .service
+        .mail_wait_otp(body)
+        .await
+        .map(Json)
+        .map_err(|e| ApiError::from_err(e, OpenAntyService::request_id()))
 }
 
 // —— AdsPower-compatible shim ——

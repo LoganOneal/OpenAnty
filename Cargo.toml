@@ -52,3 +52,7 @@ parking_lot = "0.12"
 schemars = { version = "0.8", features = ["chrono", "uuid1"] }
 regex = "1"
 which = "7"
+imap = "2.4"
+native-tls = "0.2"
+mailparse = "0.15"
+quoted_printable = "0.5"
